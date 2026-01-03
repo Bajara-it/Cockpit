@@ -84,6 +84,8 @@ usort($languages, function($a, $b) {
                         <input class="kiss-input" type="email" v-model="user.email" autocomplete="off" required>
                     </div>
 
+                    <hr class="kiss-margin-large">
+
                     <div class="kiss-margin">
                         <label><?= t('Password') ?> <icon class="kiss-size-5 kiss-color-danger kiss-margin-xsmall-start" title="Required" v-if="!user._id">trip_origin</icon></label>
                         <input class="kiss-input" type="password" v-model="user.password" :placeholder="user._id ? '<?= t('Keep current password') ?>':''" :required="!user._id" autocomplete="off">
