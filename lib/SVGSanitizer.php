@@ -479,19 +479,17 @@ class SVGSanitizer
      */
     protected function cleanXlinkHrefs(\DOMElement $element)
     {
-        $xlinks = $element->getAttributeNS('http://www.w3.org/1999/xlink', 'href');
-        if (preg_match(self::SCRIPT_REGEX, $xlinks) === 1) {
-            if (!in_array(substr($xlinks, 0, 14), [
-                'data:image/avif', // AVIF
-                'data:image/png', // PNG
-                'data:image/gif', // GIF
-                'data:image/jpg', // JPG
-                'data:image/jpe', // JPEG
-                'data:image/pjp', // PJPEG
-                'data:image/webp', // WEBP
-            ])) {
-                $element->removeAttributeNS( 'http://www.w3.org/1999/xlink', 'href' );
-            }
+        $xlinks = $element->getAttributeNodeNS('http://www.w3.org/1999/xlink', 'href');
+        $val = $xlinks ? $xlinks->value : null;
+
+        if (!$val) {
+            $xlinks = $element->getAttributeNode('xlink:href');
+            $val = $xlinks ? $xlinks->value : null;
+        }
+
+        if ($val && !$this->isAllowedUri($val)) {
+             $element->removeAttributeNS('http://www.w3.org/1999/xlink', 'href');
+             $element->removeAttribute('xlink:href');
         }
     }
 
@@ -502,10 +500,49 @@ class SVGSanitizer
      */
     protected function cleanHrefs(\DOMElement $element)
     {
-        $href = $element->getAttribute('href');
-        if (preg_match(self::SCRIPT_REGEX, $href) === 1) {
+        $hrefNode = $element->getAttributeNode('href');
+        $val = $hrefNode ? $hrefNode->value : null;
+        
+        if ($val && !$this->isAllowedUri($val)) {
             $element->removeAttribute('href');
         }
+    }
+
+    protected function isAllowedUri($uri)
+    {
+        $cleanedUri = $this->removeNonPrintableCharacters($uri);
+        
+        // Strict check: if the URI contained non-printables or required trimming, reject it.
+        if ($cleanedUri !== $uri) {
+            return false;
+        }
+
+        // If it looks like a script/data URI
+        if (preg_match(self::SCRIPT_REGEX, $cleanedUri) === 1) {
+            
+            $allowed = [
+                'data:image/avif', // AVIF
+                'data:image/png', // PNG
+                'data:image/gif', // GIF
+                'data:image/jpg', // JPG
+                'data:image/jpe', // JPEG
+                'data:image/pjp', // PJPEG
+                'data:image/webp', // WEBP
+            ];
+            
+            // Allow SVG data URIs if checking SVG content?
+            // Usually dangerous if it contains scripts. Stick to raster for now or be careful.
+            
+            foreach ($allowed as $prefix) {
+                if (str_starts_with(strtolower($cleanedUri), $prefix)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -516,7 +553,7 @@ class SVGSanitizer
      */
     protected function removeNonPrintableCharacters($value)
     {
-        return trim(preg_replace('/[^ -~]/xu','',$value));
+        return trim(preg_replace('/[^\x20-\x7E]/u','',$value));
     }
 
     /**
@@ -592,7 +629,19 @@ class SVGSanitizer
     protected function isUseTagDirty(\DOMElement $element)
     {
         $xlinks = $element->getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+        
+        if (empty($xlinks)) {
+            $xlinks = $element->getAttribute('xlink:href');
+        }
+        
         if ($xlinks && !str_starts_with($xlinks, '#')) {
+            return true;
+        }
+
+        $href = $element->getAttribute('href');
+        if ($href && !str_starts_with($href, '#')) {
+            // Also check href for use tags? Standard SVG use supports href.
+            // If we want to be strict about internal resources:
             return true;
         }
 
