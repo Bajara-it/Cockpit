@@ -6,6 +6,7 @@
 - Add `--translate` option to `app:i18n:create` command and refactor string extraction
 - Improve JSON viewer dialog
 - Enhance DotEnv parsing to support quoted, multiline, and typed values, and improve variable resolution with circular reference detection.
+- Improve SVG sanitization on upload
 
 ## 2.13.2 (2025-12-31)
 
