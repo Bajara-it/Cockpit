@@ -26,7 +26,12 @@ class Session extends \Lime\Helper {
         }
 
         $this->initialized = true;
-        $this->session = &$_SESSION;
+
+        if (isset($_SESSION) && \is_array($_SESSION)) {
+            $this->session = &$_SESSION;
+        } else {
+            $this->session = [];
+        }
     }
 
     /**
