@@ -145,10 +145,20 @@ let base64decode = function(str) {
     }).join(''));
 };
 
+let escape = function(html) {
+    return String(html)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+};
+
 export default {
     base64encode,
     base64decode,
     copyText,
+    escape,
     formatSize,
     formatDuration,
     formatNumber,
