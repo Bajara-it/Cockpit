@@ -20,7 +20,7 @@ export default {
                 return value.length;
             }
 
-            return `<icon size="larger" style="color:${value}">invert_colors</icon>`;
+            return `<icon size="larger" style="color:${App.utils.escape(value)}">invert_colors</icon>`;
         }
     },
 
