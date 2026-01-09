@@ -235,6 +235,9 @@ class QueryOptimizer {
 
     protected function toJsonPath(string $field): string {
         // Convert dot notation "a.b.c" to "$.a.b.c"
+        // sanitize field name to prevent sql injection
+        // Escape single quotes and backslashes
+        $field = str_replace(['\\', "'"], ['\\\\', "''"], $field);
         return '$' . ($field === '' ? '' : '.' . $field);
     }
 
