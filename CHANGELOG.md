@@ -1,6 +1,6 @@
 # Release Notes
 
-## WIP
+## 2.13.3 (2026-01-09)
 
 - Micro performance improvements by explicitly marking global functions in a namespace context
 - Add `--translate` option to `app:i18n:create` command and refactor string extraction
