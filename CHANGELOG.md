@@ -7,7 +7,7 @@
 - Improve JSON viewer dialog
 - Enhance DotEnv parsing to support quoted, multiline, and typed values, and improve variable resolution with circular reference detection.
 - Improve SVG sanitization on upload
-- Fix vulnerabilities in MongoLite QueryOptimizer and content aggregation api
+- Fix vulnerabilities in MongoLite QueryOptimizer and content aggregation api @DQH1
 
 ## 2.13.2 (2025-12-31)
 
