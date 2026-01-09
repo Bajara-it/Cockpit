@@ -743,6 +743,15 @@ $this->on('restApi.config', function($restApi) {
 
             $pipeline = array_merge([['$match' => ['_state' => 1]]], $pipeline);
 
+            // Security check: Disable $out and $merge stages
+            foreach ($pipeline as $stage) {
+                $cmd = array_key_first($stage);
+                if (in_array($cmd, ['$out', '$merge'])) {
+                    $app->response->status = 400;
+                    return ['error' => "The {$cmd} aggregation stage is not allowed via the API."];
+                }
+            }
+
             $process = ['locale' => $app->param('locale', 'default')];
             $populate = $app->param('populate:int', null);
 
