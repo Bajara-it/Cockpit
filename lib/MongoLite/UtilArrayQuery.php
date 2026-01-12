@@ -557,9 +557,9 @@ class UtilArrayQuery {
                 if (\is_string($b)) {
                     $b = isset($b[0]) && $b[0] == '/' ? $b : '/' . $b . '/iu';
                     if (\is_string($a)) {
-                        $r = (boolean)\preg_match($b, $a);
+                        $r = (bool)\preg_match($b, $a);
                     } elseif (\is_countable($a)) {
-                        $r = (boolean)\preg_match($b, \implode(' ', $a));
+                        $r = (bool)\preg_match($b, \implode(' ', $a));
                     }
                 }
                 break;

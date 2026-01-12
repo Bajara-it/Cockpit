@@ -3,6 +3,7 @@
 ## WIP
 
 - Remove ReflectionMethod::setAccessible() calls (deprecated since PHP >=v8.5)
+- Fix deprecated non-canonical cast usage
 
 ## 2.13.3 (2026-01-09)
 
