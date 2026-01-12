@@ -15,8 +15,10 @@ customElements.define('kiss-accordion', class extends HTMLElement {
 
             let trigger = e.target.matches('kiss-accordion-trigger') ? e.target : e.target.closest('kiss-accordion-trigger');
 
-            if (trigger) {
+            // Only handle if trigger is a direct child of this accordion (not nested)
+            if (trigger && trigger.parentElement === this) {
                 e.preventDefault();
+                e.stopPropagation();
                 this.toggle(this.triggerElements().indexOf(trigger));
             }
         })
