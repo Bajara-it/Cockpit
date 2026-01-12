@@ -66,7 +66,6 @@ class FileStorage {
 
         if (!$mountMethod) {
             $mountMethod = new \ReflectionMethod('League\Flysystem\MountManager', 'mountFilesystem');
-            $mountMethod->setAccessible(true);
         }
 
         $config = $this->config[$name];

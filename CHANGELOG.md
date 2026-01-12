@@ -1,5 +1,9 @@
 # Release Notes
 
+## WIP
+
+- Remove ReflectionMethod::setAccessible() calls (deprecated since PHP >=v8.5)
+
 ## 2.13.3 (2026-01-09)
 
 - Micro performance improvements by explicitly marking global functions in a namespace context
