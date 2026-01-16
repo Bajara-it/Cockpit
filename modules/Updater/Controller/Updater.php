@@ -38,6 +38,21 @@ class Updater extends App {
             return $this->stop(400, 'Invalid version');
         }
 
+        $user = $this->helper('auth')->getUser();
+
+        $this->app->module('system')->log(
+            "Update initiated by {$user['user']} to {$version} [{$target}]",
+            'updater',
+            'info',
+            [
+                'user' => $user['user'],
+                'user_id' => $user['_id'],
+                'version' => $version,
+                'target' => $target,
+                'from_version' => APP_VERSION,
+            ]
+        );
+
         $this->helper('updater')->update($version, $target);
 
         return ['message' => 'Update successful!'];

@@ -4,6 +4,7 @@
 
 - Remove ReflectionMethod::setAccessible() calls (deprecated since PHP >=v8.5)
 - Fix deprecated non-canonical cast usage
+- Add a dry-run option to the CLI update command and add logging to the update process
 
 ## 2.13.3 (2026-01-09)
 

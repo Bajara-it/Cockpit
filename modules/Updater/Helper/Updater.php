@@ -12,6 +12,17 @@ class Updater extends \Lime\Helper {
     }
 
     /**
+     * Log an updater event.
+     *
+     * @param string $message The log message.
+     * @param string $type The log type (info, warning, error).
+     * @param array|null $context Additional context data.
+     */
+    protected function log(string $message, string $type = 'info', ?array $context = null): void {
+        $this->app->module('system')->log($message, 'updater', $type, $context);
+    }
+
+    /**
      * Update Cockpit to a specific version.
      *
      * @param string $version The version to update to (default: 'master').
@@ -26,7 +37,23 @@ class Updater extends \Lime\Helper {
 
         $zipUrl = "{$this->releasesUrl}/{$version}/cockpit-{$target}.zip";
 
-        $this->process($zipUrl, "cockpit-{$target}");
+        $context = [
+            'version' => $version,
+            'target' => $target,
+            'from_version' => APP_VERSION,
+            'php_version' => PHP_VERSION,
+        ];
+
+        $this->log("Starting update to {$version} [{$target}] from " . APP_VERSION, 'info', $context);
+
+        try {
+            $this->process($zipUrl, "cockpit-{$target}");
+            $this->log("Update to {$version} [{$target}] completed successfully", 'info', $context);
+        } catch (\Exception $e) {
+            $context['error'] = $e->getMessage();
+            $this->log("Update to {$version} [{$target}] failed: {$e->getMessage()}", 'error', $context);
+            throw $e;
+        }
 
         return true;
     }
@@ -87,13 +114,17 @@ class Updater extends \Lime\Helper {
         // download
         $zipname = \basename($zipUrl);
 
+        $this->log("Downloading update package from {$zipUrl}");
+
         if (!\file_put_contents("{$tempPath}/{$zipname}", $this->app->helper('utils')->urlGetContents($zipUrl))) {
             throw new \Exception("Couldn't download {$zipUrl}!");
         }
 
+        $this->log("Download complete, extracting package");
+
         // extract zip contents
         if (!\is_dir("{$tempPath}/update-{$zipname}")) {
-            @\mkdir("{$tempPath}/update-{$zipname}", 0777);
+            @\mkdir("{$tempPath}/update-{$zipname}", 0755);
         }
 
         $zip = new \ZipArchive;
@@ -110,6 +141,8 @@ class Updater extends \Lime\Helper {
             throw new \Exception('Open zip file failed!');
         }
 
+        $this->log("Package extracted, verifying PHP compatibility");
+
         // check compatible php version
         $composerContents = \json_decode(\file_get_contents("{$tempPath}/update-{$zipname}/{$zipRoot}/composer.json"), true);
         $requiredPhpVersion = \str_replace('^', '', $composerContents['require']['php']);
@@ -123,11 +156,15 @@ class Updater extends \Lime\Helper {
             throw new \Exception("Your PHP version is not compatible with this update! PHP version {$requiredPhpVersion} or higher is required.");
         }
 
+        $this->log("PHP compatibility verified (required: {$requiredPhpVersion}, current: " . PHP_VERSION . "), installing files");
+
         $fs->delete("{$tempPath}/update-{$zipname}/{$zipRoot}/config");
         $fs->delete("{$tempPath}/update-{$zipname}/{$zipRoot}/storage");
 
         // copy files
         $fs->copy("{$tempPath}/update-{$zipname}/{$zipRoot}", $targetPath);
+
+        $this->log("Files installed, cleaning up");
 
         // cleanup
         $fs->delete("{$tempPath}/{$zipname}");
@@ -143,15 +180,21 @@ class Updater extends \Lime\Helper {
             $cache[] = APP_SPACES_DIR."/{$space['name']}/storage/cache/modules.cache.php";
         }
 
+        $cacheCleared = 0;
+
         foreach ($cache as $file) {
             if ($this->app->path($file)) {
                 $fs->delete($file);
+                $cacheCleared++;
             }
         }
 
         // clear opcache
         if (\function_exists('opcache_reset')) {
             \opcache_reset();
+            $this->log("Caches cleared ({$cacheCleared} module caches, opcache reset)");
+        } else {
+            $this->log("Caches cleared ({$cacheCleared} module caches)");
         }
 
         return true;

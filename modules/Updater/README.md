@@ -13,12 +13,14 @@ The Updater module provides a secure, automated way to update Cockpit CMS to the
 - **CLI Updates** - Update via command line for automation
 - **Version Detection** - Automatically detect available updates
 - **Compatibility Checks** - Ensure PHP version compatibility
+- **Dry Run Mode** - Simulate updates without making changes
 
 ### 🛡️ **Safe Update Process**
 - **Pre-Update Validation** - Check system requirements before updating
 - **Atomic Updates** - Complete or rollback, no partial updates
 - **Cache Clearing** - Automatic cache and opcache clearing
 - **Space Support** - Update works across all spaces
+- **Comprehensive Logging** - Full audit trail of all update activities
 
 ### 📦 **Update Sources**
 - **Core Updates** - Update Cockpit core system
@@ -201,7 +203,7 @@ $app->helper('updater')->update('2.8.0', 'pro');
 
 ```bash
 # Basic usage
-./tower app:update [target] [version]
+./tower app:update [target] [version] [--dry-run]
 
 # Examples:
 
@@ -216,14 +218,67 @@ $app->helper('updater')->update('2.8.0', 'pro');
 
 # Update pro to specific version
 ./tower app:update pro 2.8.0
+
+# Simulate update without making changes
+./tower app:update --dry-run
+
+# Dry run for specific version
+./tower app:update pro 2.8.0 --dry-run
 ```
 
-### Command Options
+### Command Arguments
 
 | Argument | Description | Default |
 |----------|-------------|---------|
 | `target` | Update target: 'core' or 'pro' | 'core' |
 | `version` | Version to install or 'master' | 'master' |
+
+### Command Options
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Simulate the update without making changes. Checks version info, PHP compatibility, write permissions, and temp directory access. |
+
+### Dry Run Output
+
+The `--dry-run` option performs the following checks:
+
+1. **Version Check** - Shows current and target versions
+2. **Release Info** - Fetches and displays latest release information
+3. **PHP Compatibility** - Verifies PHP version meets requirements
+4. **Write Permissions** - Checks if app directory is writable
+5. **Temp Directory** - Verifies temp directory is accessible
+6. **Update Source** - Shows the download URL that would be used
+
+Example output:
+```
+[Dry Run] Simulating update process...
+
+Current version: 2.7.0
+Target version: master [core]
+
+Checking latest release info...
+Latest available: 2.8.0 (2024-01-15)
+
+Checking PHP compatibility...
+Current PHP: 8.2.0
+Required PHP: >= 8.0
+
+Checking write permissions...
+App directory: /var/www/cockpit
+Status: Writable
+
+Checking temp directory...
+Temp directory: /var/www/cockpit/storage/tmp
+Status: Writable
+
+Update source:
+URL: https://files.getcockpit.com/releases/master/cockpit-core.zip
+
+--- Summary ---
+
+[✓] Dry run completed successfully. Update should work.
+```
 
 ## 🔒 Security Considerations
 
@@ -374,6 +429,17 @@ opcache_reset();
 
 ### Update Logs
 
+The updater module logs all update activities to the `updater` channel. Logged events include:
+
+- **Update initiated** - Who started the update (user or CLI), target version
+- **Download started** - URL of the update package
+- **Download complete** - Package extracted successfully
+- **PHP compatibility check** - Required vs current PHP version
+- **Files installed** - Update files copied to application
+- **Caches cleared** - Module caches and opcache reset
+- **Update complete** - Final success message
+- **Update failed** - Error details if something goes wrong
+
 Check update-related logs:
 
 ```php
@@ -386,6 +452,15 @@ $logs = $app->dataStorage->find('system/logs', [
     'sort' => ['timestamp' => -1]
 ]);
 ```
+
+Log context includes:
+- `user` / `user_id` - Who initiated the update (web interface only)
+- `source` - 'cli' for command-line updates
+- `version` - Target version
+- `target` - 'core' or 'pro'
+- `from_version` - Version before update
+- `php_version` - PHP version at time of update
+- `error` - Error message (if update failed)
 
 ## 📄 License
 
