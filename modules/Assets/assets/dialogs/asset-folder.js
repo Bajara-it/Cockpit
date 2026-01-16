@@ -135,6 +135,18 @@ export default {
                 </div>
             </div>
 
+            <hr class="kiss-width-1-1 kiss-margin-remove">
+            <div class="kiss-padding kiss-padding-remove-bottom kiss-bgcolor-contrast kiss-size-small" v-if="val._id">
+
+                    <div class="kiss-flex kiss-flex-middle">
+                        <div class="kiss-size-4 kiss-margin-small-end kiss-flex" title="ID"><icon>adjust</icon></div>
+                        <div class="kiss-text-truncate kiss-text-bold kiss-text-monospace kiss-size-small kiss-flex-1">
+                            {{ val._id }}
+                        </div>
+                        <a :title="t('Copy')" @click="copyID()"><icon>content_copy</icon></a>
+                    </div>
+            </div>
+
             <div class="kiss-padding kiss-bgcolor-contrast">
                 <div class="kiss-button-group kiss-flex kiss-child-width-1-2">
                     <button class="kiss-button" kiss-offcanvas-close :disabled="loading">
@@ -195,6 +207,11 @@ export default {
             }).finally(() => {
                 this.loading = false;
             });
-        }
+        },
+
+        copyID() {
+            App.utils.copyText(this.val._id, () =>  App.ui.notify('ID copied!'));
+        },
+
     }
 }
