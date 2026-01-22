@@ -24,7 +24,7 @@ The Updater module provides a secure, automated way to update Cockpit CMS to the
 
 ### 📦 **Update Sources**
 - **Core Updates** - Update Cockpit core system
-- **Pro Updates** - Update Cockpit Pro edition
+- **Pro Updates** - Update Bajara CMS edition
 - **Custom Sources** - Configure custom update servers
 - **Version Selection** - Choose specific versions to install
 

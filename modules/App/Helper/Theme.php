@@ -100,7 +100,7 @@ class Theme extends \Lime\Helper {
             return $this->app->pathToUrl('#config:logo.svg');
         }
 
-        return $this->app->baseUrl('app:assets/img/logo.svg');
+        return $this->app->baseUrl('app:assets/img/bajara.png');
     }
 
     /**

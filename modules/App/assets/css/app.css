@@ -114,7 +114,7 @@ html[data-theme='light'] kiss-card[hover="shadow"]:hover {
         0 100px 80px rgba(0, 0, 0, 0.06);
 }
 
-html[data-theme='light'] [src$="App/assets/img/logo.svg"] {
+html[data-theme='light'] [src$="App/assets/img/bajara.png"] {
     filter: invert(1);
 }
 

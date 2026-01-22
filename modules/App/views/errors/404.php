@@ -29,7 +29,7 @@
     <kiss-container class="kiss-position-relative kiss-align-center">
 
         <div class="kiss-margin-bottom">
-            <img class="app-logo kiss-margin-auto" src="<?=$this->base('app:assets/img/logo.svg')?>" width="40" alt="Logo">
+            <img class="app-logo kiss-margin-auto" src="<?=$this->base('app:assets/img/bajara.png')?>" width="40" alt="Logo">
         </div>
 
         <h1 class="kiss-text-bold">404</h1>

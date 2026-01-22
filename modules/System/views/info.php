@@ -14,7 +14,7 @@
             <kiss-card class="kiss-margin-large">
 
                 <kiss-row class="kiss-flex-middle">
-                    <div><kiss-svg src="<?=$this->baseUrl('app:assets/img/logo.svg')?>" width="60" height="60"></kiss-svg></div>
+                    <div><kiss-svg src="<?=$this->baseUrl('app:assets/img/bajara.png')?>" width="60" height="60"></kiss-svg></div>
                     <div class="kiss-flex-1">
                         <div class="kiss-size-4 kiss-text-bold">Cockpit</div>
                         <div class="kiss-text-caption kiss-margin-small kiss-color-muted">
