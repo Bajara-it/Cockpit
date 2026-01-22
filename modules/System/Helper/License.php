@@ -100,7 +100,9 @@ class License extends \Lime\Helper {
      * @return bool
      */
     public function isTrial() {
-        return ($this->required || $this->isProprietary()) && $this->license() === false;
+        // BAJARA: License system disabled - uncomment below to restore original behavior
+        // return ($this->required || $this->isProprietary()) && $this->license() === false;
+        return false;
     }
 
     /**
@@ -118,7 +120,8 @@ class License extends \Lime\Helper {
      * @return bool
      */
     public function isValidDomain() {
-
+        // BAJARA: License system disabled - uncomment below to restore original behavior
+        /*
         if (!$this->required) {
             return true;
         }
@@ -146,7 +149,7 @@ class License extends \Lime\Helper {
 
         if (!$valid) {
 
-            // allo local dev + common dev|test domains
+            // allow local dev + common dev|test domains
             if (
                 \in_array($currentHost, ['localhost', '127.0.0.1']) ||
                 \preg_match('/^(dev|staging|preview|uat|test)\./', $currentHost)
@@ -156,5 +159,7 @@ class License extends \Lime\Helper {
         }
 
         return $valid;
+        */
+        return true;
     }
 }
