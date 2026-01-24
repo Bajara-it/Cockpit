@@ -7,14 +7,14 @@ use \MongoHybrid\Client as MongoHybridClient;
 
 class Queue {
 
-    protected $storage;
-    protected $queueName;
-    protected $options;
+    protected MongoHybridClient $storage;
+    protected string $queueName;
+    protected array $options;
 
-    protected $lockTimeout = 300;
-    protected $collectionName = 'queuelite/queue';
+    protected int $lockTimeout = 300;
+    protected string $collectionName = 'queuelite/queue';
 
-    public function __construct(MongoHybridClient $storage, string $queueName, $options = []) {
+    public function __construct(MongoHybridClient $storage, string $queueName, array $options = []) {
 
         $this->storage = $storage;
         $this->queueName = $queueName;
@@ -29,7 +29,7 @@ class Queue {
         }
     }
 
-    public function push(array $data, array $options = []) {
+    public function push(array $data, array $options = []): array {
 
         $options = \array_merge([
             'delay' => 0,
@@ -106,7 +106,7 @@ class Queue {
         return $message;
     }
 
-    protected function scheduleNextRepeatableMessage(array $message) {
+    protected function scheduleNextRepeatableMessage(array $message): void {
 
         if (!isset($message['repeat'])) {
             return;
@@ -134,7 +134,7 @@ class Queue {
         ]);
     }
 
-    protected function calculateNextRepeatableInterval(string $interval, int $currentTimestamp) {
+    protected function calculateNextRepeatableInterval(string $interval, int $currentTimestamp): int {
 
         $interval = \trim($interval);
 
@@ -179,7 +179,7 @@ class Queue {
         return $nextTime !== false ? $nextTime : $currentTimestamp + 86400; // Default to 1 day if parsing fails
     }
 
-    public function reserve() {
+    public function reserve(): ?array {
 
         $message = $this->storage->find($this->collectionName, [
             'limit' => 1,
@@ -204,7 +204,7 @@ class Queue {
         return $message;
     }
 
-    public function complete(string $messageId, $data = []) {
+    public function complete(string $messageId, array $data = []): bool {
 
         $message = $this->storage->findOne($this->collectionName, ['_id' => $messageId, 'status' => 'reserved']);
 
@@ -222,9 +222,11 @@ class Queue {
         if (isset($message['repeat'])) {
             $this->scheduleNextRepeatableMessage($message);
         }
+
+        return true;
     }
 
-    public function fail(string $messageId, $data = []) {
+    public function fail(string $messageId, array $data = []): bool {
 
         $message = $this->storage->findOne($this->collectionName, ['_id' => $messageId, 'status' => 'reserved']);
 
@@ -248,9 +250,10 @@ class Queue {
             }
         }
 
+        return true;
     }
 
-    public function release() {
+    public function release(): void {
 
         $timestamp = \time();
         $lockExpiry = $timestamp - $this->lockTimeout;
@@ -265,14 +268,10 @@ class Queue {
         ]);
     }
 
-    public function delete($ids) {
+    public function delete(string|array $ids): void {
 
         if (\is_string($ids)) {
             $ids = [$ids];
-        }
-
-        if (!\is_array($ids)) {
-            return false;
         }
 
         $this->storage->remove($this->collectionName, [
@@ -281,7 +280,7 @@ class Queue {
         ]);
     }
 
-    public function messages(array $options = []) {
+    public function messages(array $options = []): array {
 
         $options = \array_merge([
             'status' => $options['status'] ?? null,
@@ -310,7 +309,7 @@ class Queue {
         ])->toArray();
     }
 
-    public function count(?string $status = null) {
+    public function count(?string $status = null): int|array {
 
         $filter = [
             'queue' => $this->queueName,

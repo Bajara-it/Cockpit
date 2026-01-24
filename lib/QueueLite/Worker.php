@@ -17,7 +17,7 @@ class Worker {
         }
     }
 
-    public function process(callable $callback, $limit = 10) {
+    public function process(callable $callback, int $limit = 10): int {
 
         $startTime = \time();
 
@@ -43,15 +43,15 @@ class Worker {
 
                 $context = new \ArrayObject([]);
 
-                $startTime = \microtime(true);
-                $startMemory = \memory_get_usage();
+                $jobStartTime = \microtime(true);
+                $jobStartMemory = \memory_get_usage();
 
                 // Process the message
                 $result = \call_user_func($callback, $message, $context);
 
                 $context['_stats'] = [
-                    'memory' => \memory_get_usage() - $startMemory,
-                    'duration' => \microtime(true) - $startTime,
+                    'memory' => \memory_get_usage() - $jobStartMemory,
+                    'duration' => \microtime(true) - $jobStartTime,
                 ];
 
                 $context = $context->getArrayCopy();
