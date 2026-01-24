@@ -505,13 +505,101 @@ class Collection {
     }
 
     /**
-     * Data aggregation
+     * Data aggregation with native SQLite optimization
      *
      * @param  array $pipeline
-     * @return Aggregation\Cursor
+     * @return Aggregation\Cursor|Aggregation\NativeCursor
      */
-    public function aggregate(array $pipeline): Aggregation\Cursor {
-        return new Aggregation\Cursor($this, $pipeline);
+    public function aggregate(array $pipeline): Aggregation\Cursor|Aggregation\NativeCursor {
+        if (empty($pipeline)) {
+            return new Aggregation\Cursor($this, $pipeline);
+        }
+
+        // Try to optimize the aggregation pipeline to native SQLite
+        $optimizer = $this->database->getAggregationOptimizer();
+        $tableName = $this->getSanitizedCollectionName();
+
+        if (!$tableName) {
+            return new Aggregation\Cursor($this, $pipeline);
+        }
+
+        $optimizer->setTableName($tableName);
+
+        // Try partial optimization - optimize what we can, PHP handles the rest
+        [$sql, $remainingPipeline, $optimizedCount] = $optimizer->optimizePartial($pipeline);
+
+        if ($optimizedCount === 0) {
+            // No stages could be optimized - fall back to PHP implementation
+            return new Aggregation\Cursor($this, $pipeline);
+        }
+
+        // Execute optimized SQL
+        try {
+            $stmt = $this->database->connection->query($sql);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Detect if pipeline contains a $count stage
+            $countFieldName = null;
+            foreach ($pipeline as $stage) {
+                if (isset($stage['$count'])) {
+                    $countFieldName = $stage['$count'];
+                    break;
+                }
+            }
+
+            // Convert rows to documents
+            $docs = [];
+            foreach ($rows as $row) {
+                if (isset($row['document'])) {
+                    // Document column - decode JSON
+                    $doc = \is_string($row['document'])
+                        ? \json_decode($row['document'], true)
+                        : $row['document'];
+                    $docs[] = $doc;
+                } else {
+                    // Grouped/projected result - convert to document format
+                    $doc = [];
+                    foreach ($row as $key => $value) {
+                        // Handle JSON columns
+                        if (\is_string($value) && \strlen($value) > 0 && ($value[0] === '{' || $value[0] === '[')) {
+                            $decoded = \json_decode($value, true);
+                            if (\json_last_error() === JSON_ERROR_NONE) {
+                                $value = $decoded;
+                            }
+                        }
+                        // Convert numeric strings to numbers where appropriate
+                        if (\is_string($value) && \is_numeric($value)) {
+                            $value = \strpos($value, '.') !== false ? (float)$value : (int)$value;
+                        }
+                        $doc[$key] = $value;
+                    }
+                    $docs[] = $doc;
+                }
+            }
+
+            // MongoDB behavior: $count on empty collection returns empty array, not [{field: 0}]
+            if ($countFieldName !== null && \count($docs) === 1) {
+                $countValue = $docs[0][$countFieldName] ?? null;
+                if ($countValue === 0) {
+                    $docs = [];
+                }
+            }
+
+            if (empty($remainingPipeline)) {
+                // Fully optimized - return native cursor
+                return new Aggregation\NativeCursor($docs);
+            }
+
+            // Partial optimization - run remaining stages through PHP
+            return new Aggregation\Cursor(
+                new Aggregation\DocumentSource($docs),
+                $remainingPipeline
+            );
+
+        } catch (\Exception $e) {
+            // SQL execution failed - fall back to PHP implementation
+            return new Aggregation\Cursor($this, $pipeline);
+        }
     }
 
     /**

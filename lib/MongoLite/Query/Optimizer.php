@@ -1,8 +1,8 @@
 <?php
 
-namespace MongoLite;
+namespace MongoLite\Query;
 
-class QueryOptimizer {
+class Optimizer {
 
     protected \PDO $connection;
 
@@ -13,7 +13,7 @@ class QueryOptimizer {
     /**
      * Attempt to convert a MongoDB criteria array into a SQL WHERE clause
      * using native SQLite JSON functions.
-     * 
+     *
      * Returns null if the query cannot be fully optimized.
      */
     public function optimize(array $criteria): ?string {
@@ -24,34 +24,34 @@ class QueryOptimizer {
 
         try {
             $conditions = [];
-            
+
             foreach ($criteria as $key => $value) {
                 // Handle top-level logical operators ($or, $and)
                 if ($key === '$or') {
                     $orConditions = [];
                     if (!\is_array($value)) return null;
-                    
+
                     foreach ($value as $subCriteria) {
                         $subSql = $this->optimize($subCriteria);
                         if ($subSql === null) return null;
                         $orConditions[] = "({$subSql})";
                     }
-                    
+
                     if (empty($orConditions)) return '0'; // Empty $or matches nothing
                     $conditions[] = '(' . \implode(' OR ', $orConditions) . ')';
                     continue;
                 }
-                
+
                 if ($key === '$and') {
                     $andConditions = [];
                     if (!\is_array($value)) return null;
-                    
+
                     foreach ($value as $subCriteria) {
                         $subSql = $this->optimize($subCriteria);
                         if ($subSql === null) return null;
                         $andConditions[] = "({$subSql})";
                     }
-                    
+
                     if (empty($andConditions)) return '1';
                     $conditions[] = '(' . \implode(' AND ', $andConditions) . ')';
                     continue;
@@ -63,7 +63,7 @@ class QueryOptimizer {
                 }
 
                 // Safety check: Disable optimization for dot notation (nested fields)
-                // because SQLite's json_extract does not support MongoDB's implicit 
+                // because SQLite's json_extract does not support MongoDB's implicit
                 // array traversal (e.g. "users.name" matching inside an array of user objects).
                 // To maintain 100% compatibility, we fallback to PHP for these cases.
                 if (\str_contains($key, '.')) {
@@ -73,12 +73,12 @@ class QueryOptimizer {
                 // Handle field conditions
                 $sql = $this->convertFieldCondition($key, $value);
                 if ($sql === null) return null;
-                
+
                 $conditions[] = $sql;
             }
 
             return implode(' AND ', $conditions);
-            
+
         } catch (\Throwable $e) {
             // Fallback to PHP processing on any error
             return null;
@@ -88,28 +88,28 @@ class QueryOptimizer {
     protected function convertFieldCondition(string $field, mixed $value): ?string {
         $path = $this->toJsonPath($field);
         $extracted = "json_extract(document, '{$path}')";
-        
+
         // 1. Direct Equality: ['field' => 'value']
         if (!\is_array($value)) {
             $quoted = $this->quote($value);
-            
+
             if ($value === null) {
                 // MongoDB {a: null} matches if a is null OR a is missing
                 // SQLite json_extract returns NULL for both cases
                 return "{$extracted} IS NULL";
             }
-            
+
             // Match scalar OR value inside array (MongoDB behavior)
             // json_each is used to search inside arrays
             $scalarCheck = "{$extracted} = {$quoted}";
             $arrayCheck = "EXISTS (SELECT 1 FROM json_each(document, '{$path}') WHERE value = {$quoted})";
-            
+
             return "({$scalarCheck} OR {$arrayCheck})";
         }
 
         // 2. Operators: ['field' => ['$gt' => 10]]
         $conditions = [];
-        
+
         foreach ($value as $op => $opValue) {
             switch ($op) {
                 case '$eq':
@@ -211,12 +211,12 @@ class QueryOptimizer {
                         'long' => 'integer',
                         'number' => ['integer', 'real']
                     ];
-                    
+
                     if (!isset($typeMap[$opValue])) return null; // Unknown type mapping
-                    
+
                     $targetTypes = (array)$typeMap[$opValue];
                     $typeCheck = "json_type(document, '{$path}')";
-                    
+
                     $typeConditions = [];
                     foreach ($targetTypes as $t) {
                         $typeConditions[] = "{$typeCheck} = '{$t}'";

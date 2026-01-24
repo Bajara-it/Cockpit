@@ -16,9 +16,13 @@ class Cursor implements Iterator {
     protected bool|int $position = false;
     protected array $data = [];
     protected array $pipeline;
-    protected Collection $collection;
+    protected object $collection;
 
-    public function __construct(Collection $collection, array $pipeline) {
+    /**
+     * @param object $collection Collection with find() and getDatabase() methods
+     * @param array $pipeline Aggregation pipeline
+     */
+    public function __construct(object $collection, array $pipeline) {
         $this->collection = $collection;
         $this->pipeline = $pipeline;
     }
@@ -749,7 +753,9 @@ class Cursor implements Iterator {
      */
     protected function countDocuments(array $data, string $outputFieldName): array {
         if (!\is_string($outputFieldName) || empty($outputFieldName)) throw new Exception("\$count needs non-empty string output field name.");
-        return [[$outputFieldName => \count($data)]]; // Return single document array
+        $count = \count($data);
+        // MongoDB returns empty result set when count is 0
+        return $count > 0 ? [[$outputFieldName => $count]] : [];
     }
 
     /**

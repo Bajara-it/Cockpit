@@ -40,6 +40,9 @@ class Projection {
             foreach ($current as $key => $value) {
                 if (\is_array($value)) {
                     $stack[] = $value;
+                } elseif (\is_string($value) && \str_starts_with($value, '$')) {
+                    // Field expression like '$name' is treated as inclusion
+                    $hasInclusion = true;
                 } elseif ((bool)$value) {
                     $hasInclusion = true;
                 } elseif (!$value && $key !== '_id') {
@@ -71,7 +74,12 @@ class Projection {
         return $projection;
     }
 
-    protected static function process(array $document, array $fields, bool $hasInclusion): array {
+    protected static function process(array $document, array $fields, bool $hasInclusion, ?array $rootDocument = null): array {
+
+        // Keep reference to root document for field expressions
+        if ($rootDocument === null) {
+            $rootDocument = $document;
+        }
 
         $result = [];
 
@@ -79,7 +87,7 @@ class Projection {
             foreach ($document as $key => $value) {
 
                 if (\is_array($value)) {
-                    $result[] = self::process($value, $fields, $hasInclusion);
+                    $result[] = self::process($value, $fields, $hasInclusion, $rootDocument);
                 } else {
                     $result[] = $value;
                 }
@@ -87,17 +95,33 @@ class Projection {
             return $result;
         }
 
+        // First handle field expressions (e.g., 'newField' => '$existingField')
+        foreach ($fields as $targetField => $fieldValue) {
+            if ($targetField === '_id') continue; // _id is handled separately
+
+            // Handle field reference expressions like '$name'
+            if (\is_string($fieldValue) && \str_starts_with($fieldValue, '$')) {
+                $sourceField = \substr($fieldValue, 1);
+                $result[$targetField] = self::getNestedValue($rootDocument, $sourceField);
+            }
+        }
+
+        // Then handle regular inclusion/exclusion
         foreach ($document as $field => $value) {
 
             if (\is_array($value) && isset($fields[$field]) && \is_array($fields[$field])) {
 
                 if (\is_array($fields[$field])) {
-                    $result[$field] = self::process($value, $fields[$field], $hasInclusion);
+                    $result[$field] = self::process($value, $fields[$field], $hasInclusion, $rootDocument);
                 } else {
                     $result[$field] = $value;
                 }
 
             } else {
+                // Skip fields that are expressions (already handled above)
+                if (isset($fields[$field]) && \is_string($fields[$field]) && \str_starts_with($fields[$field], '$')) {
+                    continue;
+                }
 
                 if ($hasInclusion && isset($fields[$field]) && $fields[$field] == 1) {
                     $result[$field] = $value;
@@ -108,6 +132,24 @@ class Projection {
         }
 
         return $result;
+    }
+
+    /**
+     * Get nested value from document using dot notation
+     */
+    protected static function getNestedValue(array $document, string $path): mixed {
+        $keys = \explode('.', $path);
+        $current = $document;
+
+        foreach ($keys as $key) {
+            if (\is_array($current) && \array_key_exists($key, $current)) {
+                $current = $current[$key];
+            } else {
+                return null;
+            }
+        }
+
+        return $current;
     }
 
     protected static function dotNotationToArray(string $dotNotation, mixed $value = 1): array {

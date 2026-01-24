@@ -35,9 +35,14 @@ class Database {
     protected array $document_criterias = [];
 
     /**
-     * @var QueryOptimizer|null
+     * @var Query\Optimizer|null
      */
-    protected ?QueryOptimizer $queryOptimizer = null;
+    protected ?Query\Optimizer $queryOptimizer = null;
+
+    /**
+     * @var Aggregation\Optimizer|null
+     */
+    protected ?Aggregation\Optimizer $aggregationOptimizer = null;
 
     /**
      * Constructor
@@ -313,13 +318,26 @@ class Database {
     }
 
     /**
-     * Get QueryOptimizer instance
+     * Get Query Optimizer instance
      */
-    public function getQueryOptimizer(): QueryOptimizer {
+    public function getQueryOptimizer(): Query\Optimizer {
         if (!isset($this->queryOptimizer)) {
-            $this->queryOptimizer = new QueryOptimizer($this->connection);
+            $this->queryOptimizer = new Query\Optimizer($this->connection);
         }
         return $this->queryOptimizer;
+    }
+
+    /**
+     * Get Aggregation Optimizer instance
+     */
+    public function getAggregationOptimizer(): Aggregation\Optimizer {
+        if (!isset($this->aggregationOptimizer)) {
+            $this->aggregationOptimizer = new Aggregation\Optimizer(
+                $this->connection,
+                $this->getQueryOptimizer()
+            );
+        }
+        return $this->aggregationOptimizer;
     }
 }
 
