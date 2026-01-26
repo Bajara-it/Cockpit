@@ -434,6 +434,16 @@ html[dir='rtl'] {
     text-transform: uppercase;
     letter-spacing: .1em;
     padding: 12px 8px;
+
+    &:first-child {
+        border-top-left-radius: var(--app-border-radius);
+        border-bottom-left-radius: var(--app-border-radius);
+    }
+
+    &:last-child {
+        border-top-right-radius: var(--app-border-radius);
+        border-bottom-right-radius: var(--app-border-radius);
+    }
 }
 
 .kiss-table thead {
