@@ -6,6 +6,7 @@
 - Fix deprecated non-canonical cast usage
 - Add a dry-run option to the CLI update command and add logging to the update process
 - Refactor MongoLite + add support for more MongoDB aggregation operators
+- Fix the possibility to delete files outside of Cockpit as super admin
 
 ## 2.13.3 (2026-01-09)
 

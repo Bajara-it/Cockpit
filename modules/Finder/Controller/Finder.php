@@ -211,7 +211,18 @@ class Finder extends App {
 
         foreach ($paths as $path) {
 
+            // Path traversal protection
+            if (\str_contains($path, '../') || \str_contains($path, '..\\') || \str_contains($path, "\0")) {
+                continue;
+            }
+
             $delpath = $this->root.'/'.\trim($path, '/');
+
+            // Verify resolved path is within root
+            $realPath = \realpath($delpath);
+            if (!$realPath || !\str_starts_with($realPath, \realpath($this->root))) {
+                continue;
+            }
 
             if (\is_dir($delpath)) {
                 $this->_rrmdir($delpath);
@@ -314,18 +325,28 @@ class Finder extends App {
 
     protected function unzip() {
 
-
-        $path    = $this->_getPathParameter();
+        $path = $this->_getPathParameter();
 
         if (!$path) return false;
 
-        $return  = ['success' => false];
-        $zip     = $this->param('zip', false);
+        $return = ['success' => false];
+        $zip    = $this->param('zip', false);
+
+        // Path traversal protection for zip parameter
+        if ($zip && (\str_contains($zip, '../') || \str_contains($zip, '..\\') || \str_contains($zip, "\0"))) {
+            return \json_encode($return);
+        }
 
         if ($path && $zip) {
 
             $path =  $this->root.'/'.\trim($path, '/');
             $zip  =  $this->root.'/'.\trim($zip, '/');
+
+            // Verify resolved zip path is within root
+            $realZipPath = \realpath($zip);
+            if (!$realZipPath || !\str_starts_with($realZipPath, \realpath($this->root))) {
+                return \json_encode($return);
+            }
 
             $za = new \ZipArchive;
 
