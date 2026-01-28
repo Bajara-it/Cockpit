@@ -64,7 +64,7 @@ $envAppVars = [
 $script = "<?php
 
 if (isset(\$_GET['async'])) {
-    \session_write_close();
+    session_write_close();
 }
 
 // include cockpit
@@ -83,7 +83,7 @@ function Cockpit() {
 }
 
 register_shutdown_function(function() {
-    \$error = \error_get_last();
+    \$error = error_get_last();
 
     if (\$error && \$error['type'] === E_ERROR) {
         // Log fatal error
@@ -91,7 +91,7 @@ register_shutdown_function(function() {
     }
 
     // Delete worker script after execution
-    if (\file_exists(__FILE__))  \unlink(__FILE__);
+    if (file_exists(__FILE__))  unlink(__FILE__);
 });
 
 extract(".\var_export($params, true).");
