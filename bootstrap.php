@@ -1,6 +1,6 @@
 <?php
 
-const APP_VERSION = '2.13.3';
+const APP_VERSION = '2.13.4';
 
 if (!defined('APP_ADMIN')) define('APP_ADMIN', false);
 if (!defined('APP_CLI')) define('APP_CLI', PHP_SAPI == 'cli');
@@ -269,7 +269,7 @@ class Cockpit {
                 }
             }
 
-            $app->trigger('app.mailer.init', [&$accounts]); 
+            $app->trigger('app.mailer.init', [&$accounts]);
 
             return new Mailer($accounts);
         });

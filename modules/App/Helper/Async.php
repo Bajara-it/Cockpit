@@ -91,7 +91,7 @@ register_shutdown_function(function() {
     }
 
     // Delete worker script after execution
-    if (file_exists(__FILE__))  unlink(__FILE__);
+    if (file_exists(__FILE__)) unlink(__FILE__);
 });
 
 extract(".\var_export($params, true).");
