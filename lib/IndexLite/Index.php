@@ -15,9 +15,14 @@ class Index {
 
     public function __construct(string $path, array $options = []) {
 
-        $this->db = new PDO("sqlite:{$path}");
+        if (\class_exists('Pdo\Sqlite')) {
+            $this->db = new \Pdo\Sqlite("sqlite:{$path}");
+        } else {
+            $this->db = new PDO("sqlite:{$path}");
+        }
+
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         $this->fields = $this->getFieldsFromExistingTable();
 
         // Register fuzzy search functions
@@ -25,34 +30,34 @@ class Index {
         $this->fuzzyEnhancer->registerFunctions();
 
         // Register Geo functions
-        $this->db->sqliteCreateFunction('geodist', function($lat1, $lon1, $lat2, $lon2) {
+        $this->createFunction('geodist', function($lat1, $lon1, $lat2, $lon2) {
             $earthRadius = 6371000; // meters
-            
+
             $lat1 = \deg2rad((float)$lat1);
             $lon1 = \deg2rad((float)$lon1);
             $lat2 = \deg2rad((float)$lat2);
             $lon2 = \deg2rad((float)$lon2);
-            
+
             $dLat = $lat2 - $lat1;
             $dLon = $lon2 - $lon1;
-            
+
             $a = \sin($dLat/2) * \sin($dLat/2) + \cos($lat1) * \cos($lat2) * \sin($dLon/2) * \sin($dLon/2);
             $c = 2 * \atan2(\sqrt($a), \sqrt(1-$a));
-            
+
             return $earthRadius * $c;
         }, 4);
 
-        $this->db->sqliteCreateFunction('geopoly', function() {
+        $this->createFunction('geopoly', function() {
             $args = \func_get_args();
             $lat = (float)\array_shift($args);
             $lon = (float)\array_shift($args);
             $polygon = $args;
-            
+
             $vertices = [];
             for ($i = 0; $i < \count($polygon); $i += 2) {
                 $vertices[] = ['lat' => (float)$polygon[$i], 'lon' => (float)$polygon[$i+1]];
             }
-            
+
             // Ray casting algorithm
             $inside = false;
             $count = \count($vertices);
@@ -324,7 +329,7 @@ class Index {
 
 
     private function parseGeoFilter(string $filter): string {
-        
+
         // _geoRadius(lat, lng, distance_in_meters)
         $filter = \preg_replace_callback('/_geoRadius\s*\(\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*,\s*(\d+)\s*\)/', function($matches) {
             $lat = $matches[1];
@@ -340,7 +345,7 @@ class Index {
             $lng1 = (float)$matches[2];
             $lat2 = (float)$matches[3];
             $lng2 = (float)$matches[4];
-            
+
             $minLat = \min($lat1, $lat2);
             $maxLat = \max($lat1, $lat2);
             $minLng = \min($lng1, $lng2);
@@ -353,13 +358,13 @@ class Index {
         $filter = \preg_replace_callback('/_geoPolygon\s*\((.*?)\)/', function($matches) {
             // Extract all coordinates
             \preg_match_all('/\[\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\]/', $matches[1], $coords);
-            
+
             $args = [];
             foreach ($coords[1] as $i => $lat) {
                 $args[] = $lat;
                 $args[] = $coords[2][$i];
             }
-            
+
             $polyArgs = \implode(', ', $args);
             return "geopoly(json_extract(__payload, '$._geo.lat'), json_extract(__payload, '$._geo.lng'), {$polyArgs})";
         }, $filter);
@@ -424,7 +429,7 @@ class Index {
         }
 
         if ($query) {
-            
+
             // Check if we should use enhanced fuzzy search
             if ($options['fuzzy'] !== null && $options['fuzzy_algorithm'] !== 'fts5') {
                 return $this->enhancedFuzzySearch($query, $options);
@@ -433,7 +438,7 @@ class Index {
             $where = $this->buildMatchQuery($query, $options['fuzzy'], $options['boosts'], $options['synonyms']);
 
             $safeFilter = $this->sanitizeFilter($options['filter']);
-            
+
             // Apply Geo Filters
             if ($safeFilter) {
                 $safeFilter = $this->parseGeoFilter($safeFilter);
@@ -445,7 +450,7 @@ class Index {
 
             // Build ORDER BY clause
             $orderClause = [];
-            
+
             if (!empty($options['sort']) && \is_array($options['sort'])) {
                 foreach ($options['sort'] as $field => $dir) {
                     // Handle _geoPoint sorting? (Not implemented yet, standard fields only)
@@ -458,7 +463,7 @@ class Index {
 
             // Use bm25() for ranking as fallback or primary sort
             $orderClause[] = $this->buildBm25OrderExpression($options['boosts'] ?? []) . " ASC";
-            
+
             $orderBy = \implode(', ', $orderClause);
 
             // Build SELECT clause with highlighting
@@ -481,7 +486,7 @@ class Index {
 
         } else {
             $safeFilter = $this->sanitizeFilter($options['filter']);
-            
+
             // Apply Geo Filters
             if ($safeFilter) {
                 $safeFilter = $this->parseGeoFilter($safeFilter);
@@ -577,7 +582,7 @@ class Index {
                 $result['facetDistribution'][$field] = $distribution;
             }
         }
-        
+
         $result['hitsPerPage'] = $result['limit'];
         $result['page'] = $result['limit'] > 0 ? \floor($result['offset'] / $result['limit']) + 1 : 1;
         $result['totalPages'] = $result['limit'] > 0 ? \ceil($result['estimatedTotalHits'] / $result['limit']) : 1;
@@ -592,14 +597,14 @@ class Index {
         $start = \microtime(true);
         $enhancer = $this->getFuzzyEnhancer();
         $fields = $this->getFields();
-        
+
         // Build fuzzy WHERE clause
         $fuzzyWhere = $enhancer->buildEnhancedFuzzyQuery($query, $fields, [
             'algorithm' => $options['fuzzy_algorithm'],
             'threshold' => $options['fuzzy_threshold'],
             'min_score' => $options['fuzzy_min_score'],
         ]);
-        
+
         // Add filter if provided (sanitized)
         $safeFilter = $this->sanitizeFilter($options['filter'] ?? '');
         if ($safeFilter) {
@@ -607,47 +612,47 @@ class Index {
         } else {
             $where = $fuzzyWhere;
         }
-        
+
         // Build relevance score based on algorithm
         $scoreExpr = $this->buildScoreExpression($query, $fields, $options);
-        
+
         // Execute query
-        $sql = "SELECT *, {$scoreExpr} as relevance_score 
-                FROM documents 
-                WHERE {$where} 
-                ORDER BY relevance_score DESC 
+        $sql = "SELECT *, {$scoreExpr} as relevance_score
+                FROM documents
+                WHERE {$where}
+                ORDER BY relevance_score DESC
                 LIMIT :limit OFFSET :offset";
-        
+
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':limit', \intval($options['limit']), PDO::PARAM_INT);
         $stmt->bindValue(':offset', \intval($options['offset']), PDO::PARAM_INT);
         $stmt->execute();
-        
+
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         // Apply field filtering if needed
         if ($options['fields'] !== '*') {
-            $intersectFields = \is_string($options['fields']) 
-                ? \array_flip(\array_map('trim', \explode(',', $options['fields']))) 
+            $intersectFields = \is_string($options['fields'])
+                ? \array_flip(\array_map('trim', \explode(',', $options['fields'])))
                 : \array_flip($options['fields']);
         }
-        
+
         // Process results
         foreach ($items as &$item) {
             $payload = \json_decode($item['__payload'] ?? '{}', true);
             $item = \array_merge($item, $payload);
             unset($item['__payload']);
-            
+
             // Apply field filtering if needed
             if ($options['fields'] !== '*') {
                 $item = \array_intersect_key($item, $intersectFields);
             }
         }
-        
+
         // Count total results
         $countSql = "SELECT COUNT(*) FROM documents WHERE {$where}";
         $count = $this->db->query($countSql)->fetchColumn();
-        
+
         $processingTimeMs = (\microtime(true) - $start) * 1000;
 
         $result = [
@@ -667,7 +672,7 @@ class Index {
                 $result['facets'] = $facetData;
             }
         }
-        
+
         return $result;
     }
 
@@ -715,50 +720,50 @@ class Index {
     private function buildScoreExpression(string $query, array $fields, array $options): string {
         $algorithm = $options['fuzzy_algorithm'];
         $expressions = [];
-        
+
         // Escape the query to prevent SQL injection
         $escapedQuery = $this->escapeQueryForSql($query);
-        
+
         foreach ($fields as $field) {
             if ($field === 'id' || $field === '__payload') continue;
-            
+
             // Sanitize field name (only allow alphanumeric and underscore)
             $sanitizedField = \preg_replace('/[^a-zA-Z0-9_]/', '', $field);
             if ($sanitizedField !== $field || empty($sanitizedField)) {
                 continue; // Skip invalid field names
             }
-            
+
             $boost = (float) ($options['boosts'][$field] ?? 1.0);
-            
+
             switch ($algorithm) {
                 case 'levenshtein':
                     $expressions[] = "(100 - levenshtein_ci({$sanitizedField}, {$escapedQuery}) * 10) * {$boost}";
                     break;
-                    
+
                 case 'jaro_winkler':
                     $expressions[] = "jaro_winkler({$sanitizedField}, {$escapedQuery}) * 100 * {$boost}";
                     break;
-                    
+
                 case 'trigram':
                     $expressions[] = "trigram_similarity({$sanitizedField}, {$escapedQuery}) * 100 * {$boost}";
                     break;
-                    
+
                 case 'hybrid':
                 default:
                     $expressions[] = "fuzzy_score({$sanitizedField}, {$escapedQuery}) * {$boost}";
                     break;
             }
         }
-        
+
         // Return the maximum score from all fields, or 0 if no expressions
         if (empty($expressions)) {
             return '0';
         }
-        
+
         if (\count($expressions) === 1) {
             return $expressions[0];
         }
-        
+
         return 'MAX(' . \implode(', ', $expressions) . ')';
     }
 
@@ -823,7 +828,7 @@ class Index {
      * Expands query terms with synonyms and formats for FTS5
      */
     private function expandSynonyms(string $query, array $synonyms, ?int $fuzzyDistance = null): string {
-        
+
         // If no synonyms and no fuzzy distance, preserve original phrase behavior (backward compat)
         if (empty($synonyms) && $fuzzyDistance === null) {
             return "\"" . $this->escapeForMatch($query) . "\"";
@@ -832,29 +837,29 @@ class Index {
         // Tokenize
         $terms = \preg_split('/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY);
         $expandedTerms = [];
-        
+
         foreach ($terms as $term) {
             $termLower = \strtolower($term);
             $variants = [$term];
-            
+
             if (isset($synonyms[$termLower])) {
                 $syns = \is_array($synonyms[$termLower]) ? $synonyms[$termLower] : [$synonyms[$termLower]];
                 $variants = \array_merge($variants, $syns);
             }
-            
+
             // Escape and format each variant
             $escapedVariants = \array_map(function($v) use ($fuzzyDistance) {
                 $esc = $this->escapeForMatch($v);
                 return $fuzzyDistance !== null ? "\"{$esc}\" NEAR/{$fuzzyDistance}" : "\"{$esc}\"";
             }, $variants);
-            
+
             if (\count($escapedVariants) > 1) {
                 $expandedTerms[] = '(' . \implode(' OR ', $escapedVariants) . ')';
             } else {
                 $expandedTerms[] = $escapedVariants[0];
             }
         }
-        
+
         return \implode(' AND ', $expandedTerms);
     }
 
@@ -983,17 +988,17 @@ class Index {
         // Update the fields property
         $this->fields = $fields;
     }
-    
+
     /**
      * Properly escape query strings for SQL to prevent injection
      */
     protected function escapeQueryForSql(string $query): string {
         // Remove any null bytes
         $query = \str_replace("\0", '', $query);
-        
+
         // Escape single quotes by doubling them
         $query = \str_replace("'", "''", $query);
-        
+
         // Wrap in single quotes
         return "'{$query}'";
     }
@@ -1042,5 +1047,19 @@ class Index {
             return '';
         }
         return $filter;
+    }
+
+    /**
+     * Create a custom SQLite function (PHP 8.5+ compatible)
+     */
+    protected function createFunction(string $name, callable $callback, int $numArgs = -1): void {
+
+        // PHP 8.5+ uses Pdo\Sqlite::createFunction()
+        if (\method_exists($this->db, 'createFunction')) {
+            $this->db->createFunction($name, $callback, $numArgs);
+        } else {
+            // Legacy: PDO::sqliteCreateFunction() for older PHP versions
+            $this->db->sqliteCreateFunction($name, $callback, $numArgs);
+        }
     }
 }

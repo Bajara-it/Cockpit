@@ -1,5 +1,9 @@
 # Release Notes
 
+## WIP
+
+- Add support for PHP 8.5+ compatible custom SQLite functions (IndexLite lib)
+
 ## 2.13.4 (2026-01-29)
 
 - Remove ReflectionMethod::setAccessible() calls (deprecated since PHP >=v8.5)

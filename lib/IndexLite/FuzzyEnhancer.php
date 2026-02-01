@@ -8,70 +8,84 @@ use PDO;
  * Enhances IndexLite with advanced fuzzy search capabilities using custom SQLite functions
  */
 class FuzzyEnhancer {
-    
+
     protected PDO $db;
     protected static array $registeredConnections = [];
-    
+
     public function __construct(PDO $db) {
         $this->db = $db;
         $this->registerFunctions();
     }
-    
+
+    /**
+     * Create a custom SQLite function (PHP 8.5+ compatible)
+     */
+    protected function createFunction(string $name, callable $callback, int $numArgs): void {
+
+        // PHP 8.5+ uses Pdo\Sqlite::createFunction()
+        if (\method_exists($this->db, 'createFunction')) {
+            $this->db->createFunction($name, $callback, $numArgs);
+        } else {
+            // Legacy: PDO::sqliteCreateFunction() for older PHP versions
+            $this->db->sqliteCreateFunction($name, $callback, $numArgs);
+        }
+    }
+
     /**
      * Register custom SQLite functions for enhanced fuzzy matching
      */
     public function registerFunctions(): void {
         // Use connection ID to track registration per database connection
         $connectionId = \spl_object_id($this->db);
-        
+
         // Prevent duplicate registration for this connection
         if (isset(self::$registeredConnections[$connectionId])) {
             return;
         }
-        
+
         // Basic Levenshtein distance
-        $this->db->sqliteCreateFunction('levenshtein', function($s1, $s2) {
+        $this->createFunction('levenshtein', function($s1, $s2) {
             return \levenshtein($s1, $s2);
         }, 2);
-        
+
         // Case-insensitive Levenshtein
-        $this->db->sqliteCreateFunction('levenshtein_ci', function($s1, $s2) {
+        $this->createFunction('levenshtein_ci', function($s1, $s2) {
             return \levenshtein(\strtolower($s1), \strtolower($s2));
         }, 2);
-        
+
         // Normalized Levenshtein (0-1 score, where 1 is perfect match)
-        $this->db->sqliteCreateFunction('levenshtein_ratio', function($s1, $s2) {
+        $this->createFunction('levenshtein_ratio', function($s1, $s2) {
             $maxLen = \max(\strlen($s1), \strlen($s2));
             if ($maxLen == 0) return 1.0;
             $distance = \levenshtein($s1, $s2);
             return 1 - ($distance / $maxLen);
         }, 2);
-        
+
         // Damerau-Levenshtein with transpositions
-        $this->db->sqliteCreateFunction('damerau_levenshtein', [$this, 'damerauLevenshtein'], 2);
-        
+        $this->createFunction('damerau_levenshtein', [$this, 'damerauLevenshtein'], 2);
+
         // Jaro-Winkler similarity (good for short strings and names)
-        $this->db->sqliteCreateFunction('jaro_winkler', [$this, 'jaroWinkler'], 2);
-        
+        $this->createFunction('jaro_winkler', [$this, 'jaroWinkler'], 2);
+
         // Trigram similarity
-        $this->db->sqliteCreateFunction('trigram_similarity', [$this, 'trigramSimilarity'], 2);
-        
+        $this->createFunction('trigram_similarity', [$this, 'trigramSimilarity'], 2);
+
         // Soundex matching
-        $this->db->sqliteCreateFunction('soundex_match', function($s1, $s2) {
+        $this->createFunction('soundex_match', function($s1, $s2) {
             return \soundex($s1) === \soundex($s2) ? 1 : 0;
         }, 2);
-        
+
         // Metaphone matching (better than soundex)
-        $this->db->sqliteCreateFunction('metaphone_match', function($s1, $s2, $phonemes = 5) {
+        $this->createFunction('metaphone_match', function($s1, $s2, $phonemes = 5) {
             return \metaphone($s1, $phonemes) === \metaphone($s2, $phonemes) ? 1 : 0;
         }, 3);
-        
+
         // Contains fuzzy - for partial fuzzy matching within text
-        $this->db->sqliteCreateFunction('contains_fuzzy', function($haystack, $needle, $threshold = 2) {
+        $this->createFunction('contains_fuzzy', function($haystack, $needle, $threshold = 2) {
             $haystack = \strtolower($haystack);
             $needle = \strtolower($needle);
             $words = \preg_split('/\s+/', $haystack);
-            
+
             foreach ($words as $word) {
                 if (\levenshtein($word, $needle) <= $threshold) {
                     return 1;
@@ -79,30 +93,30 @@ class FuzzyEnhancer {
             }
             return 0;
         }, 3);
-        
+
         // Combined fuzzy score (0-100)
-        $this->db->sqliteCreateFunction('fuzzy_score', function($s1, $s2) {
+        $this->createFunction('fuzzy_score', function($s1, $s2) {
             $s1 = \strtolower($s1);
             $s2 = \strtolower($s2);
-            
+
             // Exact match = 100
             if ($s1 === $s2) return 100;
-            
+
             // Calculate different similarity scores
             $scores = [];
-            
+
             // Levenshtein (weighted by string length)
             $maxLen = \max(\strlen($s1), \strlen($s2));
             if ($maxLen > 0) {
                 $leven = \levenshtein($s1, $s2);
                 $scores[] = \max(0, 100 - ($leven * 100 / $maxLen));
             }
-            
+
             // Soundex bonus
             if (\soundex($s1) === \soundex($s2)) {
                 $scores[] = 80;
             }
-            
+
             // Prefix match bonus
             $minLen = \min(\strlen($s1), \strlen($s2));
             $commonPrefix = 0;
@@ -116,11 +130,11 @@ class FuzzyEnhancer {
             if ($commonPrefix > 0) {
                 $scores[] = ($commonPrefix / $minLen) * 90;
             }
-            
+
             // Return the highest score
             return empty($scores) ? 0 : \max($scores);
         }, 2);
-        
+
         self::$registeredConnections[$connectionId] = true;
     }
     
