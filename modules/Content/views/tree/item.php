@@ -256,24 +256,23 @@ if (count($locales) == 1) {
 
     <script type="module">
 
+        import {useDirtyCheck} from "module-app/assets/vue-components/dirty-check.js";
+
         export default {
+
+            mixins: [useDirtyCheck('item')],
+
             data() {
-                const item = <?=json_encode($item)?>;
                 return {
                     model: <?=json_encode($model)?>,
-                    item,
+                    item: <?=json_encode($item)?>,
                     fields: <?=json_encode($fields)?>,
                     locales: <?=json_encode($locales)?>,
-                    saving: false,
-                    savedItemState: JSON.stringify(item)
+                    saving: false
                 }
             },
 
             computed: {
-
-                isModified() {
-                    return JSON.stringify(this.item) != this.savedItemState;
-                },
 
                 hasLocales() {
 
@@ -282,26 +281,6 @@ if (count($locales) == 1) {
                     }
                     return false;
                 }
-            },
-
-            mounted() {
-
-                this.$nextTick(() => {
-                    this.savedItemState = JSON.stringify(this.item);
-                });
-
-                this._beforeUnloadHandler = (e) => {
-                    if (this.isModified) {
-                        e.preventDefault();
-                        e.returnValue = this.t('You have unsaved data! Are you sure you want to leave?');
-                    }
-                };
-
-                window.addEventListener('beforeunload', this._beforeUnloadHandler);
-            },
-
-            beforeUnmount() {
-                window.removeEventListener('beforeunload', this._beforeUnloadHandler);
             },
 
             methods: {
@@ -323,7 +302,7 @@ if (count($locales) == 1) {
                     this.$request(`/content/models/saveItem/${model}`, {item: this.item}).then(item => {
 
                         this.item = Object.assign(this.item, item);
-                        this.$nextTick(() => this.savedItemState = JSON.stringify(this.item));
+                        this.resetDirtyState();
                         this.saving = false;
                         App.ui.notify('Data updated!');
 
