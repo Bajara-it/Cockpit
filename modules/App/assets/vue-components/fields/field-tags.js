@@ -47,7 +47,7 @@ export default {
     props: {
         modelValue: {
             type: Array,
-            default: []
+            default: () => []
         },
         placeholder: {
             type: String,
@@ -66,7 +66,7 @@ export default {
         },
         list: {
             type: Array,
-            default: []
+            default: () => []
         },
         src: {
             type: Object,
@@ -151,7 +151,7 @@ export default {
         },
 
         update(e) {
-            this.$emit('update:modelValue', e.detail.tags);
+            this.$emit('update:modelValue', [...e.detail.tags]);
         },
 
         resolveOptions() {
@@ -173,24 +173,22 @@ export default {
 
         resolveItemsByList() {
 
-            return new Promise((resolve) => {
+            if (!Array.isArray(this.list) || !this.list.length) {
+                return Promise.resolve([]);
+            }
 
-                if (Array.isArray(this.list) && this.list.length) {
+            let id, value, label;
 
-                    let id, value, label, options = [];
+            const options = this.list.map((item, idx) => {
 
-                    options = this.list.map((item, idx) => {
+                id = item.id ?? idx;
+                value = item.value ?? item;
+                label = item.label ?? value;
 
-                        id = item.id ?? idx;
-                        value = item.value ?? item;
-                        label = item.label ?? value;
-
-                        return { id, value, label }
-                    });
-
-                    resolve(options)
-                }
+                return { id, value, label }
             });
+
+            return Promise.resolve(options);
         },
 
         resolveItemsBySrc() {

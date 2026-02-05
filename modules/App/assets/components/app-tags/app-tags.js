@@ -283,7 +283,7 @@ customElements.define('app-tags', class extends HTMLElement {
         }
     }
 
-    addTag(value) {
+    addTag(value, silent = false) {
         if (!value) return;
 
         if (this.tags.length >= this.maxTags) {
@@ -318,9 +318,11 @@ customElements.define('app-tags', class extends HTMLElement {
         this.input.value = '';
         this.hideDropdown();
 
-        this.dispatchEvent(new CustomEvent('tags-changed', {
-            detail: { tags: this.tags }
-        }));
+        if (!silent) {
+            this.dispatchEvent(new CustomEvent('tags-changed', {
+                detail: { tags: this.tags }
+            }));
+        }
     }
 
     removeTag(value) {
@@ -351,8 +353,11 @@ customElements.define('app-tags', class extends HTMLElement {
         this.tagList.innerHTML = '';
         tags.forEach(tag => {
             const value = typeof tag === 'string' ? tag : tag.value;
-            this.addTag(value);
+            this.addTag(value, true);
         });
+        this.dispatchEvent(new CustomEvent('tags-changed', {
+            detail: { tags: this.tags }
+        }));
     }
 
     clearTags() {

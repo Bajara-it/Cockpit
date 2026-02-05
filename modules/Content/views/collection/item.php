@@ -265,13 +265,14 @@ if (count($locales) == 1) {
 
         export default {
             data() {
+                const item = <?=json_encode($item)?>;
                 return {
                     model: <?=json_encode($model)?>,
-                    item: <?=json_encode($item)?>,
+                    item,
                     fields: <?=json_encode($fields)?>,
                     locales: <?=json_encode($locales)?>,
                     saving: false,
-                    savedItemState: null
+                    savedItemState: JSON.stringify(item)
                 }
             },
 
@@ -292,18 +293,22 @@ if (count($locales) == 1) {
 
             mounted() {
 
-                setTimeout(() => {
-
+                this.$nextTick(() => {
                     this.savedItemState = JSON.stringify(this.item);
+                });
 
-                    window.onbeforeunload = e => {
+                this._beforeUnloadHandler = (e) => {
+                    if (this.isModified) {
+                        e.preventDefault();
+                        e.returnValue = this.t('You have unsaved data! Are you sure you want to leave?');
+                    }
+                };
 
-                        if (this.isModified) {
-                            e.preventDefault();
-                            e.returnValue = this.t('You have unsaved data! Are you sure you want to leave?');
-                        }
-                    };
-                }, 1500);
+                window.addEventListener('beforeunload', this._beforeUnloadHandler);
+            },
+
+            beforeUnmount() {
+                window.removeEventListener('beforeunload', this._beforeUnloadHandler);
             },
 
             methods: {
@@ -325,7 +330,7 @@ if (count($locales) == 1) {
                     this.$request(`/content/models/saveItem/${model}`, {item: this.item}).then(item => {
 
                         this.item = Object.assign(this.item, item);
-                        setTimeout(() => this.savedItemState = JSON.stringify(this.item), 20);
+                        this.$nextTick(() => this.savedItemState = JSON.stringify(this.item));
                         this.saving = false;
                         App.ui.notify('Data updated!');
 
