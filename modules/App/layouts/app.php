@@ -61,7 +61,7 @@
 
 </head>
 
-<body class="<?= ($sidePanelContents ? 'has-side-panel' : '') ?>">
+<body class="app-layout-body <?= ($sidePanelContents ? 'has-side-panel' : '') ?>">
 
     <div class="app-container">
         <aside class="app-container-aside">

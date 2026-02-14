@@ -646,11 +646,11 @@ kiss-dialog[type="prompt"]>kiss-content {
         top: 0;
     }
 
-    app-actionbar {
+    .app-layout-body app-actionbar {
         padding-left: 70px;
     }
 
-    html[dir='rtl'] app-actionbar {
+    html[dir='rtl'] .app-layout-body app-actionbar {
         padding-left: 0;
         padding-right: 70px;
     }
