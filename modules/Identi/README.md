@@ -230,6 +230,37 @@ The module uses these events:
 - **EventStream logout events** - Real-time user notifications with custom messages
 - **Cockpit logout events** - Standard logout flow integration
 
+### Customizing User Data
+
+You can hook into the authentication flow to customize user data before it is processed by using the `identi.callback.data` event. This is useful for providers that return claims in non-standard ways, such as Azure AD (Entra ID) returning roles in the ID Token instead of the UserInfo endpoint.
+
+**Example: Extracting Roles from Azure AD ID Token**
+
+Add this to your `config/bootstrap.php`:
+
+```php
+$app->on('identi.callback.data', function(&$data, $oidc) {
+
+    // Azure AD: Extract roles from ID Token
+    $idToken = $oidc->getIdToken();
+    
+    if ($idToken && str_contains($idToken, '.')) {
+        
+        $parts = explode('.', $idToken);
+        
+        if (count($parts) === 3) {
+            // Decode JWT payload
+            $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1])), true);
+            
+            // Map roles if present
+            if (isset($payload['roles']) && is_array($payload['roles']) && !empty($payload['roles'])) {
+                $data['role'] = $payload['roles'][0];
+            }
+        }
+    }
+});
+```
+
 ## Troubleshooting
 
 ### Common Issues
