@@ -73,7 +73,6 @@ class ResponseCache extends \Lime\Helper {
                 $response->status = 304;
                 $response->body = \Lime\Response::$statusCodes[304];
                 $response->flush();
-                $response->flush();
                 $this->app->stop();
             }
 
