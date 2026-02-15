@@ -160,6 +160,8 @@ class Identi extends Base {
                 }
             }
 
+            $this->app->trigger('identi.callback.data', [&$data, $oidc]);
+
             // user, email, role are required
             if (!isset($data['user'], $data['email'], $data['role'], $userInfo['sub'])) {
                 return $this->render('identi:views/error.php', ['error' => 'Missing user information returned by the provider.']);
