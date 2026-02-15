@@ -38,7 +38,8 @@ $this->on('app.api.request', function($request) {
                 $response->mime = 'json';
                 $response->body = json_encode(['error' => 'Not allowed']);
                 $response->flush();
-                exit;
+                $response->flush();
+                $this->app->stop();
             }
         }
     }

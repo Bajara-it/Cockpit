@@ -95,6 +95,8 @@ $handler = function () use ($masterApp, $APP_BASE_URL, $APP_DOCUMENT_ROOT) {
         // Update app request
         $app->request = $request;
 
+        $response = null;
+
         // Trigger init events (from index.php)
         if (!$isApiRequest) {
             $app->helper('session')->init();
@@ -130,6 +132,11 @@ $handler = function () use ($masterApp, $APP_BASE_URL, $APP_DOCUMENT_ROOT) {
         unset($request);
         unset($response);
         
+    } catch (\Lime\StopException $e) {
+        // StopException is normal flow control
+        if (isset($app)) {
+            unset($app);
+        }
     } catch (\Throwable $e) {
         // Handle unexpected errors gracefully
         error_log("Worker Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());

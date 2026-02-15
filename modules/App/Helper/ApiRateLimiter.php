@@ -37,7 +37,8 @@ class ApiRateLimiter extends \Lime\Helper {
             $response->mime = 'json';
             $response->body = \json_encode(['error' => 'Rate limit exceeded']);
             $response->flush();
-            exit;
+            $response->flush();
+            $this->app->stop();
         }
     }
 
