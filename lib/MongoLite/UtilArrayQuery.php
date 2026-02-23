@@ -106,7 +106,7 @@ class UtilArrayQuery {
                             return false;
                         }
                     } else {
-                        if (!self::getNestedValueExists($document, $key) || $fieldValue != $value) {
+                        if (!self::getNestedValueExists($document, $key) || !self::matchesDirectValue($fieldValue, $value)) {
                             return false;
                         }
                     }
@@ -140,7 +140,7 @@ class UtilArrayQuery {
                             }
                         }
                     } else {
-                        if ($fieldValue != $value) {
+                        if (!self::matchesDirectValue($fieldValue, $value)) {
                             return false;
                         }
                     }
@@ -149,7 +149,7 @@ class UtilArrayQuery {
                         return false;
                     }
                 } else {
-                    if (!self::getNestedValueExists($document, $key) || $fieldValue != $value) {
+                    if (!self::getNestedValueExists($document, $key) || !self::matchesDirectValue($fieldValue, $value)) {
                         return false;
                     }
                 }
@@ -157,6 +157,29 @@ class UtilArrayQuery {
         }
 
         return true;
+    }
+
+    /**
+     * Direct field equality with MongoDB-like array semantics.
+     * If a field is a list array, scalar/object equality should match
+     * when any top-level array element equals the query value.
+     */
+    private static function matchesDirectValue(mixed $fieldValue, mixed $queryValue): bool {
+        if (\is_array($fieldValue) && \array_is_list($fieldValue)) {
+            if ($fieldValue == $queryValue) {
+                return true;
+            }
+
+            foreach ($fieldValue as $item) {
+                if ($item == $queryValue) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return $fieldValue == $queryValue;
     }
 
     /**
