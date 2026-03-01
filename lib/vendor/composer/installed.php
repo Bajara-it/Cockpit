@@ -3,7 +3,7 @@
         'name' => 'cockpit-hq/cockpit',
         'pretty_version' => 'dev-develop',
         'version' => 'dev-develop',
-        'reference' => 'f7d4af0806c59cc6f14eb09faf5cb8ab0d90b842',
+        'reference' => '4b9f64fa7c19606b584b5431ebe90ca79ffbd740',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../../',
         'aliases' => array(),
@@ -49,7 +49,7 @@
         'cockpit-hq/cockpit' => array(
             'pretty_version' => 'dev-develop',
             'version' => 'dev-develop',
-            'reference' => 'f7d4af0806c59cc6f14eb09faf5cb8ab0d90b842',
+            'reference' => '4b9f64fa7c19606b584b5431ebe90ca79ffbd740',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../../',
             'aliases' => array(),
