@@ -5,6 +5,7 @@
 - Add support for PHP 8.5+ compatible custom SQLite functions (IndexLite lib)
 - Add identi.callback.data event trigger
 - MongoLite: Refactor equality checks with `matchesDirectValue` helper method
+- Add ScriptLite lib to support run sandboxed ECMA Script subset code
 
 ## 2.13.4 (2026-01-29)
 
