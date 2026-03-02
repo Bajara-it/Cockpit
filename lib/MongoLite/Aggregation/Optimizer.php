@@ -389,7 +389,7 @@ class Optimizer {
                     $field = substr($fieldExpr, 1);
                     $jsonPath = $this->toJsonExtract($field);
                     $parts[] = $jsonPath;
-                    $selectParts[] = "'{$alias}', {$jsonPath}";
+                    $selectParts[] = "'" . $this->escapeJsonPath($alias) . "', {$jsonPath}";
                 }
             }
             $context->groupBy = implode(', ', $parts);
@@ -406,7 +406,8 @@ class Optimizer {
             $accValue = $accumulator[$accOp];
 
             $sqlExpr = $this->buildAccumulator($accOp, $accValue, $context);
-            $context->addSelect("{$sqlExpr} as \"{$outputField}\"");
+            $safeField = $this->escapeIdentifier($outputField);
+            $context->addSelect("{$sqlExpr} as \"{$safeField}\"");
         }
 
         $context->isGrouped = true;
@@ -475,7 +476,8 @@ class Optimizer {
                 $orderParts[] = "\"_id\" {$dir}";
             } elseif ($context->isGrouped && isset($context->selectAliases[$field])) {
                 // Sort by computed field
-                $orderParts[] = "\"{$field}\" {$dir}";
+                $safeField = $this->escapeIdentifier($field);
+                $orderParts[] = "\"{$safeField}\" {$dir}";
             } else {
                 // Sort by document field
                 $jsonPath = $this->toJsonExtract($field);
@@ -491,7 +493,8 @@ class Optimizer {
      */
     protected function applyCount(Context $context, string $countField): void {
         // $count replaces the document with {field: count}
-        $context->selectFields = ["COUNT(*) as \"{$countField}\""];
+        $safeField = $this->escapeIdentifier($countField);
+        $context->selectFields = ["COUNT(*) as \"{$safeField}\""];
         $context->isCount = true;
     }
 
@@ -632,7 +635,7 @@ class Optimizer {
      * Convert field name to SQLite json_extract (raw, no unwound check)
      */
     protected function toJsonExtractRaw(string $field): string {
-        $path = '$.' . str_replace('.', '.', $field);
+        $path = '$.' . $this->escapeJsonPath($field);
         return "json_extract(document, '{$path}')";
     }
 
@@ -644,8 +647,23 @@ class Optimizer {
         if (isset($this->unwoundFields[$field])) {
             return "CAST({$this->unwoundFields[$field]} AS REAL)";
         }
-        $path = '$.' . str_replace('.', '.', $field);
+        $path = '$.' . $this->escapeJsonPath($field);
         return "CAST(json_extract(document, '{$path}') AS REAL)";
+    }
+
+    /**
+     * Escape a field name for use inside a single-quoted SQL JSON path.
+     * Matches the escaping in Query\Optimizer::toJsonPath().
+     */
+    protected function escapeJsonPath(string $field): string {
+        return str_replace(['\\', "'"], ['\\\\', "''"], $field);
+    }
+
+    /**
+     * Escape a field name for use as a double-quoted SQL identifier.
+     */
+    protected function escapeIdentifier(string $name): string {
+        return str_replace('"', '""', $name);
     }
 
     /**
@@ -745,14 +763,16 @@ class Context {
                 $fromClause .= ", json_each({$jsonPath}) AS {$alias}";
 
                 // Update document to include unwound value
-                $selectDoc = "json_set(document, '\$.{$field}', {$alias}.value)";
+                $safeField = str_replace(['\\', "'"], ['\\\\', "''"], $field);
+                $selectDoc = "json_set(document, '\$.{$safeField}', {$alias}.value)";
             }
         }
 
         // Handle $addFields
         if (!empty($this->addedFields)) {
             foreach ($this->addedFields as $name => $expr) {
-                $selectDoc = "json_set({$selectDoc}, '\$.{$name}', {$expr})";
+                $safeName = str_replace(['\\', "'"], ['\\\\', "''"], $name);
+                $selectDoc = "json_set({$selectDoc}, '\$.{$safeName}', {$expr})";
             }
         }
 
@@ -768,7 +788,8 @@ class Context {
                 $projParts[] = "'_id', json_extract(document, '\$._id')";
             }
             foreach ($this->projection as $field => $expr) {
-                $projParts[] = "'{$field}', {$expr}";
+                $safeField = str_replace(['\\', "'"], ['\\\\', "''"], $field);
+                $projParts[] = "'{$safeField}', {$expr}";
             }
             $selectClause = "json_object(" . implode(', ', $projParts) . ") as document";
         } else {
