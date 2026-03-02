@@ -8,8 +8,10 @@ use ScriptLite\Ast\Parser;
 use ScriptLite\Compiler\Compiler;
 use ScriptLite\Compiler\CompiledScript;
 use ScriptLite\Runtime\Environment;
-use ScriptLite\Transpiler\PhpTranspiler;
 use ScriptLite\Runtime\PhpObjectProxy;
+use ScriptLite\Transpiler\PhpTranspiler;
+use ScriptLite\Transpiler\Runtime\JSFunction as TrJsFunction;
+use ScriptLite\Transpiler\Runtime\JSObject as TrJsObject;
 use ScriptLite\Vm\VirtualMachine;
 
 /**
@@ -79,20 +81,20 @@ final class Engine
      * closures capture them correctly. Only the keys matter at transpile time;
      * actual values are provided at execution time.
      *
-     * @param array<string, mixed> $globals Keys = variable names to register
+     * @param list<string>|array<string, mixed> $globals Variable names (list) or name => value pairs (associative)
      */
     public function transpile(string $source, array $globals = []): string
     {
         $parser  = new Parser($source);
         $program = $parser->parse();
         $transpiler = new PhpTranspiler();
-        return $transpiler->transpile($program, array_keys($globals));
+        return $transpiler->transpile($program, self::extractGlobalNames($globals));
     }
 
     /**
      * Transpile JS source and return a closure for repeated execution.
      *
-     * @param array<string, mixed> $globals Keys = variable names to register for transpilation
+     * @param list<string>|array<string, mixed> $globals Variable names (list) or name => value pairs (associative)
      */
     public function getTranspiledCallback(string $source, array $globals = []): \Closure
     {
@@ -136,7 +138,18 @@ final class Engine
     public function evalTranspiled(string $phpSource, array $globals = []): mixed
     {
         $__globals = self::normalizeGlobals($globals);
-        return eval($phpSource);
+        set_error_handler(static function (int $errno, string $msg): bool {
+            if (str_contains($msg, 'Undefined variable')) {
+                preg_match('/\$(\w+)/', $msg, $m);
+                throw new \RuntimeException(($m[1] ?? '?') . ' is not defined');
+            }
+            return false; // let other warnings propagate normally
+        }, E_WARNING);
+        try {
+            return self::denormalizeValue(eval($phpSource));
+        } finally {
+            restore_error_handler();
+        }
     }
 
     /**
@@ -151,10 +164,18 @@ final class Engine
     {
         $file = tempnam(sys_get_temp_dir(), 'scriptlite_') . '.php';
         file_put_contents($file, "<?php\n" . $phpSource);
+        set_error_handler(static function (int $errno, string $msg): bool {
+            if (str_contains($msg, 'Undefined variable')) {
+                preg_match('/\$(\w+)/', $msg, $m);
+                throw new \RuntimeException(($m[1] ?? '?') . ' is not defined');
+            }
+            return false; // let other warnings propagate normally
+        }, E_WARNING);
         try {
             $__globals = self::normalizeGlobals($globals);
-            return include $file;
+            return self::denormalizeValue(include $file);
         } finally {
+            restore_error_handler();
             @unlink($file);
         }
     }
@@ -213,5 +234,47 @@ final class Engine
             }
         }
         return $value;
+    }
+
+    private static function denormalizeValue(mixed $value): mixed
+    {
+        if ($value instanceof TrJsObject) {
+            $result = [];
+            foreach ($value->toArray() as $key => $item) {
+                $result[$key] = self::denormalizeValue($item);
+            }
+            return $result;
+        }
+
+        if ($value instanceof TrJsFunction) {
+            return static fn(mixed ...$args): mixed => $value(...$args);
+        }
+
+        if ($value instanceof PhpObjectProxy) {
+            return $value->target;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = self::denormalizeValue($item);
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Accept either a list of names (['acc', 'multiplier']) or an associative
+     * array (['acc' => $val, ...]) and return just the names.
+     *
+     * @param list<string>|array<string, mixed> $globals
+     * @return list<string>
+     */
+    private static function extractGlobalNames(array $globals): array
+    {
+        if ($globals === [] || array_is_list($globals)) {
+            return $globals;
+        }
+        return array_keys($globals);
     }
 }

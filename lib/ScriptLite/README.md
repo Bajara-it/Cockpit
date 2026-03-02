@@ -4,7 +4,7 @@ An ECMAScript interpreter written in PHP 8.3+. Parses and executes a useful subs
 
 Two execution backends:
 - **Bytecode VM** — a stack-based virtual machine with 55 opcodes and register file optimization
-- **PHP transpiler** — compiles ECMAScript to PHP source that OPcache/JIT can optimize natively (~64x faster than the VM)
+- **PHP transpiler** — compiles ECMAScript to PHP source that OPcache/JIT can optimize natively (~31x faster than the VM)
 
 ## Quick start
 
@@ -38,13 +38,15 @@ $result = $engine->evalTranspiled($php);
 
 **Operators:** arithmetic (`+` `-` `*` `/` `%` `**`), increment/decrement (`++` `--`, prefix and postfix), comparison (`==` `!=` `===` `!==` `<` `<=` `>` `>=`), logical (`&&` `||` `!`), bitwise (`&` `|` `^` `~` `<<` `>>` `>>>`), nullish coalescing (`??`), ternary (`? :`), optional chaining (`?.`), typeof, void, delete, in, instanceof, assignment (`=` `+=` `-=` `*=` `/=` `%=` `**=` `??=` `&=` `|=` `^=` `<<=` `>>=` `>>>=`)
 
-**Control flow:** `if`/`else`, `while`, `for`, `do...while`, `switch`/`case`/`default`, `break`, `continue`, `return`
+**Control flow:** `if`/`else`, `while`, `for`, `for...of`, `for...in`, `do...while`, `switch`/`case`/`default`, `break`, `continue`, `return`
 
 **Error handling:** `try`/`catch`, `throw`
 
-**Variables:** `var` (function-scoped, hoisted), `let` (block-scoped), `const` (block-scoped, immutable)
+**Variables:** `var` (function-scoped, hoisted), `let` (block-scoped), `const` (block-scoped, immutable), array destructuring (`var [a, b, ...rest] = arr`), object destructuring (`var {name, age: a} = obj`) with defaults
 
 **Functions:** declarations, expressions, arrow functions (`=>` with expression and block bodies), closures with lexical scoping, recursion, `new` / constructors / `this`, rest parameters, spread syntax
+
+**Object literals:** shorthand properties (`{x, y}`), computed property names (`{[expr]: value}`)
 
 **Template literals:** `` `hello ${name}` `` with expression interpolation and nesting
 
@@ -55,6 +57,7 @@ $result = $engine->evalTranspiled($php);
 - `String()`, `String.fromCharCode()`
 - `parseInt()`, `parseFloat()`, `isNaN()`, `isFinite()`
 - `Date`, `Date.now()`
+- `JSON.stringify()`, `JSON.parse()`
 
 **Array methods:** `push`, `pop`, `shift`, `unshift`, `map`, `filter`, `reduce`, `forEach`, `every`, `some`, `find`, `findIndex`, `indexOf`, `includes`, `join`, `concat`, `slice`, `splice`, `sort`, `reverse`, `flat`, `fill`
 
@@ -149,27 +152,25 @@ Objects returned from methods are also wrapped, so chained access works. PHP clo
 
 ### Transpiler path
 
-The same globals work with the transpiler. Pass the globals at both transpile time (so the scope tracker knows the variable names) and at execution time (to provide the values):
+The same globals work with the transpiler. The transpile step only needs variable **names** (so the scope tracker captures them correctly); actual values are provided at execution time:
 
 ```php
-$globals = ['acc' => $acc, 'multiplier' => 2];
-
 // One-shot: transpile and execute in a single call
-$result = $engine->transpileAndEval($script, $globals);
+$result = $engine->transpileAndEval($script, ['acc' => $acc, 'multiplier' => 2]);
 
-// Transpile once, run many times with different globals
-$callback = $engine->getTranspiledCallback($script, $globals);
+// Transpile once, run many times with different values
+$callback = $engine->getTranspiledCallback($script, ['acc', 'multiplier']);
 $result = $callback(['acc' => $acc1, 'multiplier' => 2]);
 $result = $callback(['acc' => $acc2, 'multiplier' => 3]);
 
 // Or step by step for full control:
-$php = $engine->transpile($script, $globals);
-$result = $engine->runTranspiled($php, $globals);    // temp file (worker-safe)
-$result = $engine->evalTranspiled($php, $globals);   // eval (leaks in long-running workers)
+$php = $engine->transpile($script, ['acc', 'multiplier']);
+$result = $engine->runTranspiled($php, ['acc' => $acc]);    // temp file (worker-safe)
+$result = $engine->evalTranspiled($php, ['acc' => $acc]);   // eval (leaks in long-running workers)
 
 // Or save to a file for OPcache:
 $engine->saveTranspiled($php, '/tmp/script.php');
-$__globals = $globals;
+$__globals = ['acc' => $acc, 'multiplier' => 2];
 $result = include '/tmp/script.php';
 ```
 
@@ -217,7 +218,7 @@ The transpiler maps ECMAScript constructs directly to PHP equivalents:
 php vendor/bin/phpunit tests/
 ```
 
-533 PHPUnit tests across 27 test files covering arithmetic, arrays, arrow functions, break/continue, constructors, control flow, do-while, functions, globals, number/string objects, objects, operators, regex, scoping, string methods, switch, template literals, try/catch, spread/rest, extended operators (increment/decrement, exponentiation, bitwise, void, delete, in, instanceof), and edge cases.
+680 PHPUnit tests (1486 assertions) across 30 test files covering arithmetic, arrays, arrow functions, break/continue, constructors, control flow, destructuring, do-while, for...of/for...in, functions, globals, JSON, number/string objects, objects, operators, regex, scoping, string methods, switch, template literals, try/catch, spread/rest, extended operators (increment/decrement, exponentiation, bitwise, void, delete, in, instanceof), fuzzing, and edge cases.
 
 ## Benchmark
 
@@ -229,9 +230,9 @@ Runs 10 workloads (sieve of Eratosthenes, fibonacci with memoization, quicksort,
 
 | Mode | Execution time | vs Native PHP |
 |---|---|---|
-| VM (bytecode interpreter) | ~72 ms | ~100x |
-| Transpiled PHP (eval'd) | ~1.1 ms | ~1.6x |
-| Native PHP (hand-written) | ~0.7 ms | 1x |
+| VM (bytecode interpreter) | ~80 ms | ~108x |
+| Transpiled PHP (eval'd) | ~2.6 ms | ~3.5x |
+| Native PHP (hand-written) | ~0.75 ms | 1x |
 
 
 ## License
