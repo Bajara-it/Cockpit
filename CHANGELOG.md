@@ -6,6 +6,7 @@
 - Add identi.callback.data event trigger
 - MongoLite: Refactor equality checks with `matchesDirectValue` helper method
 - Add ScriptLite lib to support run sandboxed ECMA Script subset code
+- MongoLite Aggregation Optimizer: Escape identifiers and JSON paths to ensure safe usage in SQL queries
 
 ## 2.13.4 (2026-01-29)
 
