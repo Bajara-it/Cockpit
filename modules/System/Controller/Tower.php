@@ -47,10 +47,17 @@ class Tower extends App {
             $command = \substr($command, 6);
         }
 
-        $command = "tower {$command}";
         $phpBinaryPath = (new PhpExecutableFinder())->find();
 
-        $process = Process::fromShellCommandline("$phpBinaryPath {$command} -n");
+        if (!$phpBinaryPath) {
+            return $this->stop(['error' => 'PHP binary not found'], 500);
+        }
+
+        // Use Process array form to prevent shell injection.
+        // Array form calls proc_open() directly without /bin/sh -c,
+        // so shell metacharacters (backticks, $(), ;, |, &&) are not interpreted.
+        $args = \preg_split('/\s+/', $command, -1, PREG_SPLIT_NO_EMPTY);
+        $process = new Process([$phpBinaryPath, 'tower', ...$args, '-n']);
         $process->setPty(true);
         $process->run();
 

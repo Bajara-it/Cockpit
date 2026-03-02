@@ -7,6 +7,7 @@
 - MongoLite: Refactor equality checks with `matchesDirectValue` helper method
 - Add ScriptLite lib to support run sandboxed ECMA Script subset code
 - MongoLite Aggregation Optimizer: Escape identifiers and JSON paths to ensure safe usage in SQL queries
+- Tower: Prevent shell injection by using Process array form
 
 ## 2.13.4 (2026-01-29)
 
