@@ -266,6 +266,21 @@ final class JsArray
                 }
                 return $acc;
             }) : null,
+            'reduceRight' => $invoker !== null ? new NativeFunction('reduceRight', function (mixed $fn, mixed $initial = null) use ($invoker) {
+                $acc = $initial;
+                $startIdx = count($this->elements) - 1;
+                if ($acc === null || $acc === JsUndefined::Value) {
+                    if (empty($this->elements)) {
+                        throw new \RuntimeException('TypeError: Reduce of empty array with no initial value');
+                    }
+                    $acc = $this->elements[$startIdx];
+                    $startIdx--;
+                }
+                for ($i = $startIdx; $i >= 0; $i--) {
+                    $acc = $invoker($fn, [$acc, $this->elements[$i], $i]);
+                }
+                return $acc;
+            }) : null,
             'every' => $invoker !== null ? new NativeFunction('every', function (mixed $fn) use ($invoker) {
                 foreach ($this->elements as $i => $el) {
                     if (!$invoker($fn, [$el, $i])) {
@@ -282,6 +297,43 @@ final class JsArray
                 }
                 return false;
             }) : null,
+            'findLast' => $invoker !== null ? new NativeFunction('findLast', function (mixed $fn) use ($invoker) {
+                for ($i = count($this->elements) - 1; $i >= 0; $i--) {
+                    if ($invoker($fn, [$this->elements[$i], $i])) {
+                        return $this->elements[$i];
+                    }
+                }
+                return JsUndefined::Value;
+            }) : null,
+            'findLastIndex' => $invoker !== null ? new NativeFunction('findLastIndex', function (mixed $fn) use ($invoker) {
+                for ($i = count($this->elements) - 1; $i >= 0; $i--) {
+                    if ($invoker($fn, [$this->elements[$i], $i])) {
+                        return $i;
+                    }
+                }
+                return -1;
+            }) : null,
+            'flatMap' => $invoker !== null ? new NativeFunction('flatMap', function (mixed $fn) use ($invoker) {
+                $result = [];
+                foreach ($this->elements as $i => $el) {
+                    $mapped = $invoker($fn, [$el, $i]);
+                    if ($mapped instanceof JsArray) {
+                        foreach ($mapped->elements as $item) {
+                            $result[] = $item;
+                        }
+                    } else {
+                        $result[] = $mapped;
+                    }
+                }
+                return new JsArray($result);
+            }) : null,
+            'at' => new NativeFunction('at', function (mixed $index = 0) {
+                $i = (int) $index;
+                if ($i < 0) {
+                    $i += count($this->elements);
+                }
+                return $this->elements[$i] ?? JsUndefined::Value;
+            }),
 
             default => null,
         };
