@@ -138,6 +138,20 @@ class Users extends App {
             $user[$key] = \strip_tags(\trim($user[$key]));
         }
 
+        // Prevent XSS via twofa.secret - never accept secret from client
+        if (isset($user['twofa'])) {
+
+            $enabled = !empty($user['twofa']['enabled']);
+            $secret = $this->helper('twfa')->createSecret(160);
+
+            if ($isUpdate) {
+                $existingUser = $this->app->dataStorage->findOne('system/users', ['_id' => $user['_id']]);
+                $secret = $existingUser['twofa']['secret'] ?? $secret;
+            }
+
+            $user['twofa'] = \compact('enabled', 'secret');
+        }
+
         if (isset($user['_meta']) && (!\is_array($user['_meta']) || \array_is_list($user['_meta']))) {
             $user['_meta'] = new \ArrayObject([]);
         }

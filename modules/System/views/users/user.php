@@ -132,7 +132,7 @@ usort($languages, function($a, $b) {
                             <field-boolean class="kiss-size-3" v-model="user.twofa.enabled"></field-boolean>
                         </div>
                         <kiss-row class="kiss-margin animated fadeIn" v-if="user.twofa.enabled">
-                            <div><img src="<?= $this->route("/system/users/getSecretQRCode/{$user['twofa']['secret']}/150") ?>" width="150" height="150" loading="lazy" style="background:#fff;border:10px #fff solid;"></div>
+                            <div><img src="<?= $this->route("/system/users/getSecretQRCode/{$this->escape($user['twofa']['secret'])}/150") ?>" width="150" height="150" loading="lazy" style="background:#fff;border:10px #fff solid;"></div>
                             <div class="kiss-flex-1">
 
                                 <p class="kiss-text-monospace kiss-color-muted">
@@ -142,7 +142,7 @@ usort($languages, function($a, $b) {
 
                                 <kiss-card class="kiss-padding-small kiss-flex" theme="bordered" gap="small">
                                     <div class="kiss-flex-1 kiss-text-monospace kiss-text-bold kiss-text-truncate">
-                                        <?= $user['twofa']['secret'] ?>
+                                        <?= $this->escape($user['twofa']['secret']) ?>
                                     </div>
                                     <a :title="t('Copy')" @click="copyTwofaSecret"><icon>content_copy</icon></a>
                                 </kiss-card>
