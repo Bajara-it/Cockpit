@@ -8,6 +8,7 @@
 - Add ScriptLite lib to support run sandboxed ECMA Script subset code
 - MongoLite Aggregation Optimizer: Escape identifiers and JSON paths to ensure safe usage in SQL queries
 - Tower: Prevent shell injection by using Process array form
+- Fix stored XSS vulnerability in user profile twofa.secret field
 
 ## 2.13.4 (2026-01-29)
 
