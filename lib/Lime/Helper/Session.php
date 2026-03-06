@@ -8,8 +8,8 @@ use function \Lime\fetch_from_array;
 class Session extends \Lime\Helper {
 
     protected bool $initialized = false;
-    public string $name;
-    protected array $session;
+    public string $name = '';
+    protected array $session = [];
 
     public function init(?string $name = null): void {
 
@@ -81,7 +81,9 @@ class Session extends \Lime\Helper {
      * @return void
      */
     public function destroy(): void {
-        \session_destroy();
+        if (\session_status() == \PHP_SESSION_ACTIVE) {
+            \session_destroy();
+        }
     }
 
     /**
@@ -90,7 +92,9 @@ class Session extends \Lime\Helper {
      * @return void
      */
     public function close(): void {
-        \session_write_close();
+        if (\session_status() == \PHP_SESSION_ACTIVE) {
+            \session_write_close();
+        }
     }
 
     /**
