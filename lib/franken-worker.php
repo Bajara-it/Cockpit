@@ -123,27 +123,37 @@ $handler = function () use ($masterApp, $APP_BASE_URL, $APP_DOCUMENT_ROOT) {
         if ($response->body !== false) {
             echo $response->body;
         }
-        
-        $app->trigger('app:request:after');
-        $app->trigger('shutdown', [false]);
-
-        // Cleanup
-        unset($app);
-        unset($request);
-        unset($response);
-        
+    
     } catch (\Lime\StopException $e) {
         // StopException is normal flow control
-        if (isset($app)) {
-            unset($app);
-        }
     } catch (\Throwable $e) {
+
         // Handle unexpected errors gracefully
         error_log("Worker Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
         http_response_code(500);
         echo "Internal Server Error";
-        
-        if (isset($app)) unset($app);
+
+    } finally {
+
+        if (\session_status() === \PHP_SESSION_ACTIVE) {
+            \session_write_close();
+        }
+
+        if (isset($app)) {
+            try {
+                $app->trigger('app:request:after');
+            } catch (\Throwable $e) {
+                error_log("Worker teardown error during app:request:after: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            }
+
+            try {
+                $app->trigger('shutdown', [false]);
+            } catch (\Throwable $e) {
+                error_log("Worker teardown error during shutdown: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            }
+        }
+
+        unset($app, $request, $response);
     }
 };
 
