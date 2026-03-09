@@ -6,66 +6,84 @@ customElements.define('app-avatar', class extends HTMLElement {
 
     constructor() {
         super();
+
+        this.canvas = document.createElement('canvas');
+        this._lastAutoAriaLabel = null;
     }
 
     connectedCallback() {
-        setTimeout(() => this.draw(), 0);
+        this.render();
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
-        this.draw();
+        if (oldValue !== newValue) {
+            this.render();
+        }
     }
 
-    disconnectedCallback() {
+    render() {
 
+        if (!this.isConnected) {
+            return;
+        }
+
+        if (!this.contains(this.canvas)) {
+            this.replaceChildren(this.canvas);
+        }
+
+        this.draw();
     }
 
     draw() {
 
-        this.innerHTML = '<canvas></canvas>';
-
-        let name = this.getAttribute('name') || '';
-        let size = this.getAttribute('size') || 60;
-        let color = this.getAttribute('color') || null;
-
-        let canvas = this.querySelector('canvas');
-
-        let colours = [
-            "#1abc9c", "#2ecc71", "#3498db", "#9b59b6", "#34495e", "#16a085", "#27ae60", "#2980b9", "#8e44ad", "#2c3e50",
-            "#f1c40f", "#e67e22", "#e74c3c", "#ecf0f1", "#95a5a6", "#f39c12", "#d35400", "#c0392b", "#bdc3c7", "#7f8c8d"
+        const palette = [
+            '#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#34495e', '#16a085', '#27ae60', '#2980b9', '#8e44ad', '#2c3e50',
+            '#f1c40f', '#e67e22', '#e74c3c', '#ecf0f1', '#95a5a6', '#f39c12', '#d35400', '#c0392b', '#bdc3c7', '#7f8c8d'
         ];
 
-        let nameSplit = String(name).toUpperCase().split(' ');
-        let initials, charIndex, colourIndex, context, dataURI;
+        const name = (this.getAttribute('name') || '').trim();
+        const color = this.getAttribute('color') || null;
+        const size = Math.max(parseInt(this.getAttribute('size') || '60', 10) || 60, 16);
+        const scale = window.devicePixelRatio || 1;
+        const parts = name ? name.toUpperCase().split(/\s+/).filter(Boolean) : [];
+        const initials = parts.length > 1
+            ? `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`
+            : (parts[0] ? parts[0].charAt(0) : '?');
+        const baseChar = initials === '?' ? 'A' : initials.charAt(0);
+        const colorIndex = Math.abs(baseChar.charCodeAt(0) - 65) % palette.length;
+        const context = this.canvas.getContext('2d');
 
-
-        if (nameSplit.length == 1) {
-            initials = nameSplit[0] ? nameSplit[0].charAt(0) : '?';
-        } else {
-            initials = nameSplit[0].charAt(0) + nameSplit[1].charAt(0);
+        if (!context) {
+            return null;
         }
 
-        if (window.devicePixelRatio) {
-            //size = (size * window.devicePixelRatio);
+        this.style.setProperty('--app-avatar-size', `${size}px`);
+
+        if (!this.hasAttribute('role')) {
+            this.setAttribute('role', 'img');
         }
 
-        charIndex = (initials == '?' ? 72 : initials.charCodeAt(0)) - 64;
-        colourIndex = charIndex % 20;
-        canvas.width = size;
-        canvas.height = size;
-        context = canvas.getContext("2d");
+        const nextAriaLabel = name || 'Avatar';
+        const currentAriaLabel = this.getAttribute('aria-label');
 
-        context.fillStyle = color ? color : colours[colourIndex - 1];
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.font = Math.round(canvas.width / 2) + "px Arial";
-        context.textAlign = "center";
-        context.fillStyle = "#FFF";
-        context.fillText(initials, size / 2, size / 1.5);
+        if (!currentAriaLabel || currentAriaLabel === this._lastAutoAriaLabel) {
+            this.setAttribute('aria-label', nextAriaLabel);
+            this._lastAutoAriaLabel = nextAriaLabel;
+        }
 
-        dataURI = canvas.toDataURL();
+        this.canvas.width = size * scale;
+        this.canvas.height = size * scale;
 
-        this.canvas = canvas;
+        context.setTransform(scale, 0, 0, scale, 0, 0);
+        context.clearRect(0, 0, size, size);
+        context.fillStyle = color || palette[colorIndex];
+        context.fillRect(0, 0, size, size);
+        context.font = `600 ${Math.round(size / 2)}px system-ui, sans-serif`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = '#fff';
+        context.fillText(initials, size / 2, size / 2);
 
-        return dataURI;
+        return this.canvas.toDataURL();
     }
 });

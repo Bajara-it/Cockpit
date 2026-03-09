@@ -11,6 +11,7 @@ customElements.define('app-scrollcontainer', class extends HTMLElement {
         this._onDomContentLoaded = () => this._scheduleExpand();
         this._onResize = () => this._scheduleExpand();
         this._onLoad = () => this._scheduleExpand();
+        this._onScroll = () => this._scheduleExpand();
 
         this._connected = false;
 
@@ -42,6 +43,7 @@ customElements.define('app-scrollcontainer', class extends HTMLElement {
         if (!this._connected) {
             document.addEventListener('DOMContentLoaded', this._onDomContentLoaded, { once: true });
             window.addEventListener('resize', this._onResize, { passive: true });
+            window.addEventListener('scroll', this._onScroll, { passive: true });
             window.addEventListener('load', this._onLoad, { once: true });
 
             // Visual viewport changes (mobile keyboards, zoom)
@@ -68,6 +70,7 @@ customElements.define('app-scrollcontainer', class extends HTMLElement {
         if (this._connected) {
             document.removeEventListener('DOMContentLoaded', this._onDomContentLoaded);
             window.removeEventListener('resize', this._onResize);
+            window.removeEventListener('scroll', this._onScroll);
             window.removeEventListener('load', this._onLoad);
             if (window.visualViewport) {
                 try {
@@ -173,6 +176,7 @@ customElements.define('app-scrollcontainer', class extends HTMLElement {
         // If no boundary, tear down observers
         if (!selector) {
             this._detachResizeObserver();
+            this._detachBoundaryAttrObserver();
             this._disconnectMutationObserver();
             this._boundaryEl = null;
             return;
@@ -229,6 +233,7 @@ customElements.define('app-scrollcontainer', class extends HTMLElement {
             try { this._mo.disconnect(); } catch (e) {}
             this._mo = null;
         }
+        this._moScheduled = false;
     }
 
     _maybeRefreshBoundary() {

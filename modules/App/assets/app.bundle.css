@@ -1739,6 +1739,23 @@ icon[size="large"] {
     right: 0;
     border-color: var(--app-switch-oncolor, green);
 }
+app-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--app-avatar-size, 60px);
+    height: var(--app-avatar-size, 60px);
+    line-height: 0;
+    vertical-align: middle;
+    border-radius: var(--app-border-radius, 50%);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+app-avatar canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
 app-actionbar {
     position: fixed;
     display: block;
@@ -5338,7 +5355,6 @@ html[data-theme='light'] body::before {
     margin-bottom: 1.2rem;
     opacity: .8;
 }
-app-avatar canvas,
 .app-border-radius {
     border-radius: var(--app-border-radius);
 }

@@ -324,7 +324,6 @@ html[data-theme='light'] body::before {
     opacity: .8;
 }
 
-app-avatar canvas,
 .app-border-radius {
     border-radius: var(--app-border-radius);
 }
