@@ -1,6 +1,6 @@
 # Release Notes
 
-## WIP
+## 2.13.5 (2026-03-09)
 
 - Add support for PHP 8.5+ compatible custom SQLite functions (IndexLite lib)
 - Add identi.callback.data event trigger
