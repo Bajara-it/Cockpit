@@ -1,5 +1,9 @@
 # Release Notes
 
+## WIP
+
+- Refactor session state management and event stream handling in admin module
+
 ## 2.14.0 (2026-03-30)
 
 - Improve KISS components
