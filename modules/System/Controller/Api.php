@@ -162,6 +162,9 @@ class Api extends App {
         }
 
         $openapi = \OpenApi\Generator::scan($paths, ['analyser' => new \SwaggerPhp\AlternativeTokenAnalyser()]);
+        
+        $this->app->trigger('system.openapi.collect', [$openapi]);
+        
         $output = $format === 'json' ? $openapi->toJson() : $openapi->toYaml();
 
         // replace placeholders
