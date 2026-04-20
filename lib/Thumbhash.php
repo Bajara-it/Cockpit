@@ -181,7 +181,6 @@ class Thumbhash {
         $avg_b = 0;
         $avg_a = 0;
 
-        // TODO : use array_chunk ?
         for ($i = 0, $j = 0; $i < $w * $h; $i++, $j += 4) {
             $alpha = $rgba[$j + 3] / 255;
             $avg_r += $alpha / 255 * $rgba[$j];
@@ -204,7 +203,6 @@ class Thumbhash {
         $q = []; // red - green
         $a = []; // alpha
 
-        // TODO : use array_chunk ?
         // Convert the image from RGBA to LPQA (composite atop the average color)
         for ($i = 0, $j = 0; $i < $w * $h; $i++, $j += 4) {
             $alpha = $rgba[$j + 3] / 255;
@@ -217,7 +215,6 @@ class Thumbhash {
             $a[$i] = $alpha;
         }
 
-        // var_dump($l, $p, $q, $a);
         // Encode using the DCT into DC (constant) and normalized AC (varying) terms
         list($l_dc, $l_ac, $l_scale) = static::encodeChannel($l, max(3, $lx), max(3, $ly), $w, $h);
         list($p_dc, $p_ac, $p_scale) = static::encodeChannel($p, 3, 3, $w, $h);
@@ -264,10 +261,10 @@ class Thumbhash {
             for ($cx = 0; $cx * $ny < $nx * ($ny - $cy); $cx++) {
                 $f = 0;
                 for ($x = 0; $x < $w; $x++) {
-                    $fx[$x] = cos(pi() / $w * $cx * ($x + 0.5));
+                    $fx[$x] = cos(M_PI / $w * $cx * ($x + 0.5));
                 }
                 for ($y = 0; $y < $h; $y++) {
-                    for ($x = 0, $fy = cos(pi() / $h * $cy * ($y + 0.5)); $x < $w; $x++) {
+                    for ($x = 0, $fy = cos(M_PI / $h * $cy * ($y + 0.5)); $x < $w; $x++) {
                         $f += $channel[$x + $y * $w] * $fx[$x] * $fy;
                     }
                 }
