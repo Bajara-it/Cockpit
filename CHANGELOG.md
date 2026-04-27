@@ -5,6 +5,7 @@
 - Refactor session state management and event stream handling in admin module
 - Replace `App.utils.$interpolate` / `App.utils.interpolate` `Function`-based evaluation with sandboxed JSLite execution to reduce browser-side code execution risk while preserving display template behavior
 - Add manual admin account input on installation
+- MongoLite: Refactor document encoding in Collection class to improve error handling
 
 ## 2.14.0 (2026-03-30)
 

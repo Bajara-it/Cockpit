@@ -104,11 +104,7 @@ class Collection {
         $table = $this->getSanitizedCollectionName();
         $document['_id'] = isset($document['_id']) ? $document['_id'] : createMongoDbLikeId();
         
-        // Encode document with error handling
-        $json = \json_encode($document, JSON_UNESCAPED_UNICODE);
-        if ($json === false) {
-            throw new \RuntimeException('Failed to encode document: ' . \json_last_error_msg());
-        }
+        $json = $this->encodeDocument($document, 'Failed to encode document');
         $data = ['document' => $json];
 
         $fields = [];
@@ -196,11 +192,7 @@ class Collection {
                     $document = $this->applyUpdateOperators($_doc, $data, $merge);
                     $document['_id'] = $_doc['_id'];
 
-                    // Encode document with error handling
-                    $json = \json_encode($document, JSON_UNESCAPED_UNICODE);
-                    if ($json === false) {
-                        throw new \RuntimeException('Failed to encode document during update: ' . \json_last_error_msg());
-                    }
+                    $json = $this->encodeDocument($document, 'Failed to encode document during update');
                     
                     $sql = "UPDATE `{$sanitizedName}` SET document=".$conn->quote($json)." WHERE id=".(int)$doc['id'];
 
@@ -380,6 +372,27 @@ class Collection {
             return \json_encode($a) === \json_encode($b);
         }
         return $a === $b;
+    }
+
+    /**
+     * Encode a document for SQLite storage.
+     */
+    protected function encodeDocument(array $document, string $errorPrefix): string {
+        $json = \json_encode($document, JSON_UNESCAPED_UNICODE);
+
+        if ($json !== false) {
+            return $json;
+        }
+
+        if (\json_last_error() === JSON_ERROR_RECURSION) {
+            $json = \json_encode($document, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+
+            if ($json !== false) {
+                return $json;
+            }
+        }
+
+        throw new \RuntimeException($errorPrefix . ': ' . \json_last_error_msg());
     }
 
     /**
