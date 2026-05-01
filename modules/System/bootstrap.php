@@ -88,7 +88,7 @@ $this->module('system')->extend([
             return false;
         }
 
-        $data = $this->app->dataStorage->findOne('system/users', ['_id' => $user['_id']], ['_id' => 1, 'password' => 1]);
+        $data = $this->app->dataStorage->findOne('system/users', ['_id' => $user['_id'], 'active' => true], ['_id' => 1, 'password' => 1]);
 
         if (!$data || !password_verify($password, $data['password'])) {
             return false;
