@@ -39,11 +39,11 @@ export default {
 
     props: {
         modelValue: {
-            default: {}
+            default: () => ({})
         },
         fields: {
             type: Array,
-            default: []
+            default: () => []
         },
         mode: {
             type: String,

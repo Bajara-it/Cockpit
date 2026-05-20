@@ -40,7 +40,7 @@ let FieldsManager = {
     props: {
         modelValue: {
             type: Array,
-            default: []
+            default: () => []
         },
         i18n: {
             type: Boolean,
