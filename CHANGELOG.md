@@ -9,7 +9,7 @@
 - Prevent users to update their active status without needed permissios
 - Breaking: JWT HS256 signing now requires keys to be at least 32 bytes long; update short `sec-key` before upgrading
 - Fix Set field options retaining fields from the previously created Set field
-- Fix path traversal in PHP built-in server space storage file handler
+- Fix path traversal in PHP built-in server space storage file handler @geo-chen
   
 ## 2.14.0 (2026-03-30)
 
