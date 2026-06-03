@@ -219,9 +219,15 @@ class Buckets extends App {
 
                 // clean filename
                 $clean = \preg_replace('/[^a-zA-Z0-9-_\.]/','', \str_replace(' ', '-', $files['name'][$i]));
-                $_file  = $this->app->path('#tmp:').'/'.$files['name'][$i];
+                $_file = $this->app->path('#tmp:').'/'.$files['name'][$i];
+                $_mime = null;
 
-                if (!$files['error'][$i] && $this->_isFileTypeAllowed($clean) && \move_uploaded_file($files['tmp_name'][$i], $_file)) {
+                if (!$files['error'][$i] && $finfo) {
+                    $_mime = \finfo_file($finfo, $files['tmp_name'][$i]);
+                    $_mime = $_mime ?: null;
+                }
+
+                if (!$files['error'][$i] && $this->_isFileTypeAllowed($clean, $_mime) && \move_uploaded_file($files['tmp_name'][$i], $_file)) {
 
                     if (\preg_match('/\.svg$/i', $clean) && !\SVGSanitizer::sanitizeFile($_file)) {
                         @unlink($_file);
@@ -236,7 +242,7 @@ class Buckets extends App {
                     try {
 
                         $opts  = [
-                            'mimetype' => \finfo_file($finfo, $_file)
+                            'mimetype' => $_mime ?: ($finfo ? \finfo_file($finfo, $_file) : null)
                         ];
 
                         $stream = \fopen($_file, 'r+');
@@ -253,10 +259,14 @@ class Buckets extends App {
                     }
 
                 } else {
-                    $failed[]  = ['file' => $files['name'][$i], 'error' => $files['error'][$i]];
+                    $failed[]  = ['file' => $files['name'][$i], 'error' => $files['error'][$i] ?: 'File type not allowed'];
                     $_failed[] = $_file;
                 }
             }
+        }
+
+        if ($finfo) {
+            \finfo_close($finfo);
         }
 
         return \json_encode(['uploaded' => $uploaded, 'failed' => $failed]);
@@ -326,13 +336,26 @@ class Buckets extends App {
         return !\preg_match('/[\/\\\\:*?"<>|]/', $name);
     }
 
-    protected function _isFileTypeAllowed($file) {
+    protected function _isFileTypeAllowed($file, ?string $mime = null): bool {
 
-        $allowed = \trim($this->app->retrieve('finder.allowed_uploads', '*'));
+        $allowed = $this->app->retrieve('finder.allowed_uploads', '*');
+        $extension = \strtolower(\pathinfo((string)$file, PATHINFO_EXTENSION));
+        $forbiddenExtensions = [
+            'bat', 'exe', 'sh',
+            'php', 'php3', 'php4', 'php5', 'php7', 'php8',
+            'phar', 'phtml', 'phps', 'pht', 'shtml',
+            'htm', 'html', 'xhtml', 'htaccess',
+        ];
 
-        if (\strtolower(\pathinfo($file, PATHINFO_EXTENSION)) == 'php') {
+        if (\in_array($extension, $forbiddenExtensions, true)) {
             return false;
         }
+
+        if (!$this->_isMimeTypeAllowed($mime)) {
+            return false;
+        }
+
+        $allowed = \is_array($allowed) ? $allowed : \trim($allowed);
 
         if ($allowed == '*') {
             return true;
@@ -341,6 +364,23 @@ class Buckets extends App {
         $allowed = \str_replace([' ', ','], ['', '|'], \preg_quote(\is_array($allowed) ? \implode(',', $allowed) : $allowed));
 
         return \preg_match("/\.({$allowed})$/i", $file);
+    }
+
+    protected function _isMimeTypeAllowed(?string $mime): bool {
+
+        if (!$mime) {
+            return true;
+        }
+
+        $forbiddenMimes = [
+            'application/x-httpd-php',
+            'application/x-php',
+            'text/x-php',
+            'text/html',
+            'application/xhtml+xml',
+        ];
+
+        return !\in_array(\strtolower($mime), $forbiddenMimes, true);
     }
 
 }
