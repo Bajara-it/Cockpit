@@ -20,7 +20,9 @@ class Buckets extends App {
             return false;
         }
 
-        $bucket = \preg_replace('/[^a-zA-Z0-9-_\.]/','', \str_replace(' ', '-', $bucket));
+        if (!\preg_match('/^[a-zA-Z0-9_-]+$/', $bucket)) {
+            return $this->stop(['error' => 'Invalid bucket name'], 412);
+        }
 
         $this->root = "uploads://buckets/{$bucket}";
 
