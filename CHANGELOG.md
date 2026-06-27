@@ -11,6 +11,7 @@
 - Fix Set field options retaining fields from the previously created Set field
 - Fix path traversal in PHP built-in server space storage file handler @geo-chen
 - Harden bucket upload and rename filtering to block executable/HTML file types and PHP/HTML MIME types
+- Add dummy password check to prevent timing attacks in login method
   
 ## 2.14.0 (2026-03-30)
 
