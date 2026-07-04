@@ -97,16 +97,16 @@ $this->module('assets')->extend([
 
             for ($i = 0; $i < $cnt; $i++) {
 
-                $_file  = $this->app->path('#tmp:').'/'.$files['name'][$i];
+                $_clientName = basename(str_replace('\\', '/', $files['name'][$i]));
+                $_filename = pathinfo($_clientName, PATHINFO_FILENAME);
+                $extension = pathinfo($_clientName, PATHINFO_EXTENSION);
+                $extension = preg_match('/^[a-z0-9]+$/i', $extension) ? strtolower($extension) : '';
+                $_filename = $this->app->helper('utils')->slugify($_filename, '-', false);
+                $_filename = $_filename ?: 'upload';
+                $_file  = $this->app->path('#tmp:').'/'.$_filename.($extension ? ".{$extension}" : '');
                 $_mime = $finfo->file($files['tmp_name'][$i]);
-                $_isAllowed = $allowed === true ? true : preg_match("/\.({$allowed})$/i", $_file);
+                $_isAllowed = $extension && ($allowed === true ? true : preg_match("/\.({$allowed})$/i", $_file));
                 $_sizeAllowed = $max_size ? filesize($files['tmp_name'][$i]) < $max_size : true;
-
-                $extension = strtolower(pathinfo(parse_url($_file, PHP_URL_PATH), PATHINFO_EXTENSION));
-
-                if (!$extension) {
-                    $_isAllowed = false;
-                }
 
                 // prevent uploading php / html files
                 if ($_isAllowed && (

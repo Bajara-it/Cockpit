@@ -12,6 +12,8 @@
 - Fix path traversal in PHP built-in server space storage file handler @geo-chen
 - Harden bucket upload and rename filtering to block executable/HTML file types and PHP/HTML MIME types
 - Add dummy password check to prevent timing attacks in login method
+- Refactor URL construction in cron.php for better readability and security
+- Enhance argument normalization and validation un Ffmpeg/Vips helpers
   
 ## 2.14.0 (2026-03-30)
 
