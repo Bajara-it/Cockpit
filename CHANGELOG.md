@@ -14,6 +14,7 @@
 - Add dummy password check to prevent timing attacks in login method
 - Refactor URL construction in cron.php for better readability and security
 - Enhance argument normalization and validation un Ffmpeg/Vips helpers
+- Fix state validation for unpublished singleton items
   
 ## 2.14.0 (2026-03-30)
 
