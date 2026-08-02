@@ -4,6 +4,8 @@
 
 - Refactor session state management and event stream handling in admin module
 - Replace `App.utils.$interpolate` / `App.utils.interpolate` `Function`-based evaluation with sandboxed JSLite execution to reduce browser-side code execution risk while preserving display template behavior
+- Sanitize Set field and tree display template output to prevent stored XSS while preserving safe HTML formatting
+- Sanitize asset titles on save and escape asset metadata when rendering Asset fields to prevent stored XSS
 - Add manual admin account input on installation
 - MongoLite: Refactor document encoding in Collection class to improve error handling
 - Prevent users to update their active status without needed permissios

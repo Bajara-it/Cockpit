@@ -49,6 +49,11 @@ $this->module('assets')->extend([
 
             if (!$_asset) continue;
 
+            if (isset($asset['title'])) {
+                $title = \is_string($asset['title']) ? $asset['title'] : '';
+                $asset['title'] = \trim(\str_replace(['<', '>', '"'], '', \strip_tags($title)));
+            }
+
             $asset['_modified'] = time();
             $asset['_mby'] = $by;
 
