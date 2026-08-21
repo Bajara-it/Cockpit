@@ -93,7 +93,7 @@ class Users extends App {
         }
 
         // don't allow to change sensitive fields if user doesn't have permissions
-        if (isset($user['role']) && !$this->isAllowed('app/users/manage')) {
+        if (!$this->isAllowed('app/users/manage')) {
             unset($user['role'], $user['active']);
         }
 
