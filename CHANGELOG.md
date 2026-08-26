@@ -1,6 +1,6 @@
 # Release Notes
 
-## WIP
+## 2.14.1 (2026-08-26)
 
 - Refactor session state management and event stream handling in admin module
 - Replace `App.utils.$interpolate` / `App.utils.interpolate` `Function`-based evaluation with sandboxed JSLite execution to reduce browser-side code execution risk while preserving display template behavior
